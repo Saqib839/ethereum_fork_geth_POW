@@ -1,0 +1,40 @@
+=============== Jul 23, 2026 (UTC) ===============
+19:20:25.398494 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+19:20:25.402614 db@open opening
+19:20:25.403109 version@stat F·[] S·0B[] Sc·[]
+19:20:25.405434 db@janitor F·2 G·0
+19:20:25.405484 db@open done T·2.835919ms
+19:20:25.418713 db@close closing
+19:20:25.418778 db@close done T·63.2µs
+=============== Jul 23, 2026 (UTC) ===============
+20:06:59.334918 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:06:59.335167 version@stat F·[] S·0B[] Sc·[]
+20:06:59.335342 db@open opening
+20:06:59.335427 journal@recovery F·1
+20:06:59.342848 journal@recovery recovering @1
+20:06:59.344901 memdb@flush created L0@2 N·13 S·933B "Hޙ..\x87\x19\t,v6":"\xf0\xdf_..\x84=3,v2"
+20:06:59.352853 version@stat F·[1] S·933B[933B] Sc·[0.25]
+20:06:59.360606 db@janitor F·3 G·0
+20:06:59.360636 db@open done T·25.27787ms
+=============== Jul 23, 2026 (UTC) ===============
+20:11:06.754943 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:11:06.755174 version@stat F·[1] S·933B[933B] Sc·[0.25]
+20:11:06.755220 db@open opening
+20:11:06.755331 journal@recovery F·1
+20:11:06.760714 journal@recovery recovering @3
+20:11:06.768319 memdb@flush created L0@5 N·9 S·616B "Dat..ion,v16":"unc..own,v23"
+20:11:06.775287 version@stat F·[2] S·1KiB[1KiB] Sc·[0.50]
+20:11:06.806969 db@janitor F·4 G·0
+20:11:06.807017 db@open done T·51.770129ms
+20:11:08.985931 db@close closing
+20:11:08.986017 db@close done T·82.802µs
+=============== Jul 23, 2026 (UTC) ===============
+20:13:12.837825 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:13:12.838112 version@stat F·[2] S·1KiB[1KiB] Sc·[0.50]
+20:13:12.838138 db@open opening
+20:13:12.838234 journal@recovery F·1
+20:13:12.849592 journal@recovery recovering @6
+20:13:12.851848 memdb@flush created L0@8 N·2 S·428B "eth..\x87\x19\t,v25":"unc..own,v26"
+20:13:12.859945 version@stat F·[3] S·1KiB[1KiB] Sc·[0.75]
+20:13:12.869028 db@janitor F·5 G·0
+20:13:12.869073 db@open done T·30.920871ms
