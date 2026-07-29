@@ -1,55 +1,18 @@
-=============== Jul 23, 2026 (UTC) ===============
-19:19:30.269119 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-19:19:30.273662 db@open opening
-19:19:30.274293 version@stat F·[] S·0B[] Sc·[]
-19:19:30.276950 db@janitor F·2 G·0
-19:19:30.277003 db@open done T·3.309823ms
-19:19:30.291868 db@close closing
-19:19:30.291959 db@close done T·88.101µs
-=============== Jul 23, 2026 (UTC) ===============
-19:58:29.862668 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-19:58:29.862871 version@stat F·[] S·0B[] Sc·[]
-19:58:29.862893 db@open opening
-19:58:29.862950 journal@recovery F·1
-19:58:29.865637 journal@recovery recovering @1
-19:58:29.868305 memdb@flush created L0@2 N·13 S·933B "Hޙ..\x87\x19\t,v6":"\xf0\xdf_..\x84=3,v2"
-19:58:29.871191 version@stat F·[1] S·933B[933B] Sc·[0.25]
-19:58:29.876834 db@janitor F·3 G·0
-19:58:29.876875 db@open done T·13.969878ms
-=============== Jul 23, 2026 (UTC) ===============
-20:04:51.272572 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-20:04:51.272738 version@stat F·[1] S·933B[933B] Sc·[0.25]
-20:04:51.272757 db@open opening
-20:04:51.272854 journal@recovery F·1
-20:04:51.275292 journal@recovery recovering @3
-20:04:51.277916 memdb@flush created L0@5 N·12 S·658B "Dat..ion,v16":"unc..own,v23"
-20:04:51.281804 version@stat F·[2] S·1KiB[1KiB] Sc·[0.50]
-20:04:51.286962 db@janitor F·4 G·0
-20:04:51.287007 db@open done T·14.22789ms
-=============== Jul 23, 2026 (UTC) ===============
-20:05:33.501726 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-20:05:33.502022 version@stat F·[2] S·1KiB[1KiB] Sc·[0.50]
-20:05:33.502056 db@open opening
-20:05:33.502166 journal@recovery F·1
-20:05:33.505988 journal@recovery recovering @6
-20:05:33.508544 memdb@flush created L0@8 N·2 S·428B "eth..\x87\x19\t,v28":"unc..own,v29"
-20:05:33.511532 version@stat F·[3] S·1KiB[1KiB] Sc·[0.75]
-20:05:33.517044 db@janitor F·5 G·0
-20:05:33.517078 db@open done T·15.007228ms
-=============== Jul 23, 2026 (UTC) ===============
-20:10:56.309841 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-20:10:56.310005 version@stat F·[3] S·1KiB[1KiB] Sc·[0.75]
-20:10:56.310024 db@open opening
-20:10:56.310084 journal@recovery F·1
-20:10:56.312613 journal@recovery recovering @9
-20:10:56.315832 memdb@flush created L0@11 N·48 S·2KiB "H\x16\xb3..#\x94\x1b,v72":"unc..own,v32"
-20:10:56.318976 version@stat F·[4] S·4KiB[4KiB] Sc·[1.00]
-20:10:56.324878 db@janitor F·6 G·0
-20:10:56.324931 db@open done T·14.883279ms
-20:10:56.325205 table@compaction L0·4 -> L1·0 S·4KiB Q·79
-20:10:56.328973 table@build created L1@14 N·50 S·2KiB "Dat..ion,v16":"\xf0\xdf_..\x84=3,v2"
-20:10:56.329016 version@stat F·[0 1] S·2KiB[0B 2KiB] Sc·[0.00 0.00]
-20:10:56.330401 table@compaction committed F-3 S-1KiB Ke·0 D·25 T·5.149131ms
-20:10:56.330560 table@remove removed @8
-20:10:56.330654 table@remove removed @5
-20:10:56.330751 table@remove removed @2
+=============== Jul 29, 2026 (UTC) ===============
+20:29:04.421015 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:29:04.427502 db@open opening
+20:29:04.428474 version@stat F·[] S·0B[] Sc·[]
+20:29:04.431395 db@janitor F·2 G·0
+20:29:04.431418 db@open done T·3.89959ms
+20:29:04.449540 db@close closing
+20:29:04.449650 db@close done T·107.202µs
+=============== Jul 29, 2026 (UTC) ===============
+20:29:17.158380 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+20:29:17.158552 version@stat F·[] S·0B[] Sc·[]
+20:29:17.158570 db@open opening
+20:29:17.158624 journal@recovery F·1
+20:29:17.161121 journal@recovery recovering @1
+20:29:17.164400 memdb@flush created L0@2 N·13 S·927B "H.\xd5..\xd6@\x98,v6":"\xc1\x11\xbb..\x142\xe0,v2"
+20:29:17.167297 version@stat F·[1] S·927B[927B] Sc·[0.25]
+20:29:17.175152 db@janitor F·3 G·0
+20:29:17.175197 db@open done T·16.616182ms

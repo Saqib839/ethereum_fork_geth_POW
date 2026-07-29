@@ -1,43 +1,77 @@
-# Ethereum PoW Private Blockchain — Complete Setup Guide
+# Nakamoto Coefficient Chain — Complete Setup Guide
 
-> Private two-node Ethereum blockchain using Geth v1.10.26 (pre-Merge, Ethash PoW)
+> Private two-node Ethereum PoW blockchain — Nakamoto Coefficient Chain
 > Built and running on Ubuntu 24.04 server at `45.249.8.94`
+> Geth v1.10.26 (pre-Merge, Ethash PoW) | Chain ID: 5356 | Coin: NKM
 
 ---
 
 ## Table of Contents
 
-1. [Repository Structure](#1-repository-structure)
-2. [Current Account Info](#2-current-account-info)
-3. [Software Versions](#3-software-versions)
-4. [Fresh Install — Step by Step](#4-fresh-install--step-by-step)
-5. [genesis.json — Rules and Structure](#5-genesisjson--rules-and-structure)
-6. [Starting the Nodes](#6-starting-the-nodes)
-7. [Connecting the Nodes](#7-connecting-the-nodes)
-8. [RPC Commands Reference](#8-rpc-commands-reference)
-9. [Monitoring Commands](#9-monitoring-commands)
-10. [Common Errors and Fixes](#10-common-errors-and-fixes)
-11. [Port Reference](#11-port-reference)
-12. [Useful References](#12-useful-references)
+1. [Chain Identity](#1-chain-identity)
+2. [Repository Structure](#2-repository-structure)
+3. [Current Account Info](#3-current-account-info)
+4. [Deployed Contracts — Uniswap V3 DEX](#4-deployed-contracts--uniswap-v3-dex)
+5. [MetaMask Configuration](#5-metamask-configuration)
+6. [Software Versions](#6-software-versions)
+7. [Fresh Install — Step by Step](#7-fresh-install--step-by-step)
+8. [genesis.json — Rules and Structure](#8-genesisjson--rules-and-structure)
+9. [Starting the Nodes](#9-starting-the-nodes)
+10. [Connecting the Nodes](#10-connecting-the-nodes)
+11. [RPC Commands Reference](#11-rpc-commands-reference)
+12. [Monitoring Commands](#12-monitoring-commands)
+13. [Common Errors and Fixes](#13-common-errors-and-fixes)
+14. [Port Reference](#14-port-reference)
+15. [Useful References](#15-useful-references)
 
 ---
 
-## 1. Repository Structure
+## 1. Chain Identity
+
+| Property | Value |
+|----------|-------|
+| Chain Name | Nakamoto Coefficient |
+| Chain ID | `5356` |
+| Chain ID (hex) | `0x14EC` |
+| Coin Name | Nakamoto Coin |
+| Coin Symbol | `NKM` |
+| Coin Decimals | `18` (EVM standard — cannot be changed) |
+| Initial Supply | `20,000,000 NKM` (pre-mined to miner wallet) |
+| Block Reward | `2 NKM` per block (Ethash ConstantinopleBlockReward) |
+| Block Time | ~10-20 seconds (auto-adjusted by difficulty) |
+| Gas Limit | `30,000,000` per block (0x1C9C380 — same as ETH mainnet) |
+| Consensus | Ethash Proof of Work |
+| Server IP | `45.249.8.94` |
+| Node1 RPC | `http://45.249.8.94:8545` (miner, internal) |
+| Node2 RPC | `http://45.249.8.94:8546` (public RPC) |
+
+> ℹ️ **Why 18 decimals?** The EVM is hardwired to use 18 decimals for native coins. Changing this would break MetaMask, ethers.js, Hardhat, Uniswap V3 math, and every other EVM tool. All EVM chains use 18 decimals internally — the symbol displayed is just cosmetic.
+
+---
+
+## 2. Repository Structure
 
 ```
 ~/ (home: /home/ovextech)
-├── go-ethereum-pow/              ← Geth source code (cloned + built here)
+├── go-ethereum-pow/              ← Geth v1.10.26 source code (cloned + built here)
 │   └── build/bin/geth            ← compiled Geth binary
 │
-└── ethereum-pow-blockchain/      ← your private chain data
+├── Uniswap_Dex_Deployment/       ← Uniswap V3 deployment repo
+│   ├── .env                      ← chain config for deployment
+│   ├── ignition/deployments/
+│   │   └── myNewChain-5356.json  ← deployed contract addresses
+│   └── contracts/
+│       └── WETH9.sol             ← wrapped native coin contract
+│
+└── ethereum-pow-blockchain/      ← chain data
     ├── genesis.json              ← chain configuration (shared by both nodes)
     ├── node1.log                 ← miner node live logs
     ├── node2.log                 ← rpc node live logs
-    ├── node1/                    ← MINER node
-    │   ├── geth/                 ← chain database (can be deleted to reinit)
-    │   ├── keystore/             ← ⚠️ NEVER DELETE — contains your accounts
-    │   └── geth.ipc              ← IPC socket (appears when node is running)
-    └── node2/                    ← RPC node
+    ├── node1/                    ← MINER node (port 8545)
+    │   ├── geth/                 ← chain database (delete to reinit)
+    │   ├── keystore/             ← ⚠️ NEVER DELETE — contains accounts
+    │   └── geth.ipc              ← IPC socket (appears when node running)
+    └── node2/                    ← RPC node (port 8546)
         ├── geth/
         ├── keystore/
         └── geth.ipc
@@ -45,7 +79,7 @@
 
 ---
 
-## 2. Current Account Info
+## 3. Current Account Info
 
 ### Node1 — Miner Account
 
@@ -55,8 +89,8 @@
 | Private Key | `0x8fd14eaa99bf3e15c56f9bc45cea1b9bbce8fc35dc70d984d10a027462280ed8` |
 | Keystore File | `node1/keystore/UTC--2026-07-23T19-09-47.194076365Z--80a63d2c5cb3d83e3ea235c98cd64710c43e1ef2` |
 | Password | `p1@1234` |
-| Role | Mining rewards go here |
-| Pre-funded | Yes — 1,000,000 ETH in genesis alloc |
+| Role | Mining rewards go here — also used to deploy contracts |
+| Pre-funded | Yes — 20,000,000 NKM in genesis alloc |
 
 ### Node2 — RPC Account
 
@@ -64,37 +98,119 @@
 |-------|-------|
 | Public Address | `0x7cc201Dcd87Dbbe7762b8Db914367D27478202e0` |
 | Keystore File | `node2/keystore/UTC--2026-07-23T19-19-55.210441037Z--7cc201dcd87dbbe7762b8db914367d27478202e0` |
-| Role | RPC endpoint, not mining |
+| Role | RPC endpoint only, not mining |
+
+### Node1 Enode (current — changes on fresh start)
+
+```
+enode://ea8ec493fc81c03770af9021bc8147921270c6fd13536db9c71c0244746eda26969d9fd1da553a4365d7d1c313f17e9005026c369c004ab1472be718138624c9@127.0.0.1:30303
+```
 
 > ⚠️ **CRITICAL**: Never commit private keys to git. Never share them. Back up the keystore directory separately.
 
+> ⚠️ The enode key changes if you delete `node1/geth`. After any reinit, get the new enode via:
+> ```bash
+> ~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node1/geth.ipc
+> admin.nodeInfo.enode
+> ```
+
 ---
 
-## 3. Software Versions
+## 4. Deployed Contracts — Uniswap V3 DEX
+
+All deployed on chain ID `5356`. Deployment record:
+`~/Uniswap_Dex_Deployment/ignition/deployments/myNewChain-5356.json`
+
+| Contract | Address |
+|----------|---------|
+| WETH9 (Wrapped NKM) | `0x55E0C3d36DcD26f8f0fE738799a6B41728AcE9AF` |
+| UniswapV3Factory | `0x20b5d680A19868842991BA3b89F4399dAB8E32D6` |
+| NFTDescriptor | `0xb0f35c597579A73cb9d0620588975a31B04087Ad` |
+| NonfungibleTokenPositionDescriptor | `0x5c0dffF18De91C4826b4670F67164D9707cC4E86` |
+| NonfungiblePositionManager | `0xcb2d87e18e82ea62ee45e41F8B65A3362D5564bB` |
+| SwapRouter | `0xe6f89767D7ee7d6f9824a1e36ed2C2a25a784672` |
+| QuoterV2 | `0x0C865AC3cC9F11718d911ca9b52d6c31b8369671` |
+
+### Verify a contract is on chain
+
+```bash
+curl -s -X POST http://127.0.0.1:8545 \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0x55E0C3d36DcD26f8f0fE738799a6B41728AcE9AF","latest"],"id":1}'
+# Returns long bytecode = contract exists
+# Returns "0x" = no contract at that address
+```
+
+### Redeploy contracts (after chain reset)
+
+```bash
+cd ~/Uniswap_Dex_Deployment
+npm run deploy:chain
+```
+
+---
+
+## 5. MetaMask Configuration
+
+Add the Nakamoto Coefficient chain to MetaMask:
+
+| Field | Value |
+|-------|-------|
+| Network Name | Nakamoto Coefficient |
+| RPC URL | `http://45.249.8.94:8546` |
+| Chain ID | `5356` |
+| Currency Symbol | `NKM` |
+| Block Explorer URL | (leave blank — not set up yet) |
+
+> ⚠️ Node2 must be started with `--http.corsdomain "*"` and `--http.vhosts "*"` flags for MetaMask to connect. See Section 9.
+
+### Test RPC is reachable from outside
+
+Run this from your local machine (not the server):
+
+```bash
+curl -s -X POST http://45.249.8.94:8546 \
+  -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+# Expected: {"result":"0x14ec"}
+```
+
+---
+
+## 6. Software Versions
 
 | Software | Version | Why This Version |
 |----------|---------|-----------------|
 | Ubuntu | 24.04 LTS | Server OS |
 | Go | 1.21.13 | Compatible with Geth v1.10.26 |
 | Geth | v1.10.26 | Last pre-Merge version — keeps Ethash PoW |
+| Node.js | 22.x | Required by Uniswap deployment repo (>=20 <25) |
 | Consensus | Ethash (PoW) | No Beacon client needed |
 
-> ⚠️ **Do NOT use Geth v1.11+** — those versions expect a Beacon consensus client and will not mine with Ethash alone.
+> ⚠️ **Do NOT use Geth v1.11+** — those versions require a Beacon consensus client and will not mine with Ethash alone.
 
 ---
 
-## 4. Fresh Install — Step by Step
+## 7. Fresh Install — Step by Step
 
-Follow this section exactly if rebuilding from scratch.
+Follow this section exactly if rebuilding from scratch on a new server.
 
-### 4.1 — System packages
+### 7.1 — System packages
 
 ```bash
 sudo apt update
 sudo apt install -y build-essential git wget python3 python3-venv
 ```
 
-### 4.2 — Install Go 1.21.13
+### 7.2 — Fix DNS if needed
+
+```bash
+# If wget/git fail with DNS errors:
+echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
+ping -c 2 google.com
+```
+
+### 7.3 — Install Go 1.21.13
 
 ```bash
 wget https://go.dev/dl/go1.21.13.linux-amd64.tar.gz
@@ -108,46 +224,39 @@ go version
 # Expected: go version go1.21.13 linux/amd64
 ```
 
-> ⚠️ If `wget` fails with DNS error, fix DNS first:
-> ```bash
-> echo "nameserver 8.8.8.8" | sudo tee /etc/resolv.conf
-> ping -c 2 google.com   # verify it works
-> ```
+### 7.4 — Install Node.js 22
 
-### 4.3 — Clone Geth and checkout v1.10.26
+```bash
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt install -y nodejs
+node --version   # must be v22.x.x
+```
+
+### 7.5 — Clone and build Geth v1.10.26 from source
 
 ```bash
 git clone https://github.com/ethereum/go-ethereum.git go-ethereum-pow
 cd go-ethereum-pow
 git checkout v1.10.26
 git describe --tags    # must print: v1.10.26
-```
-
-### 4.4 — Build Geth from source
-
-```bash
-cd ~/go-ethereum-pow
 make geth
-
-# Verify binary exists and works
 ./build/bin/geth version
 ```
 
-### 4.5 — Create project structure
+### 7.6 — Create project structure
 
 ```bash
 mkdir -p ~/ethereum-pow-blockchain/node1
 mkdir -p ~/ethereum-pow-blockchain/node2
-cd ~/ethereum-pow-blockchain
 ```
 
-### 4.6 — Create genesis.json
+### 7.7 — Create genesis.json
 
 ```bash
 cat > ~/ethereum-pow-blockchain/genesis.json << 'EOF'
 {
   "config": {
-    "chainId": 12345,
+    "chainId": 5356,
     "homesteadBlock": 0,
     "eip150Block": 0,
     "eip155Block": 0,
@@ -161,21 +270,25 @@ cat > ~/ethereum-pow-blockchain/genesis.json << 'EOF'
     "ethash": {}
   },
   "difficulty": "0x400",
-  "gasLimit": "0x8000000",
+  "gasLimit": "0x1C9C380",
   "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",
-  "alloc": {}
+  "alloc": {
+    "80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": {
+      "balance": "20000000000000000000000000"
+    }
+  }
 }
 EOF
 ```
 
-### 4.7 — Create miner account (node1)
+### 7.8 — Create miner account (node1)
 
 ```bash
 GETH=~/go-ethereum-pow/build/bin/geth
 $GETH account new --datadir ~/ethereum-pow-blockchain/node1
 ```
 
-Note the public address printed. Then extract the private key:
+Note the public address. Extract the private key:
 
 ```bash
 python3 -m venv ~/eth-venv
@@ -200,55 +313,52 @@ PYEOF
 ~/eth-venv/bin/python3 /tmp/extract_key.py
 ```
 
-Save both values securely before continuing.
-
-### 4.8 — Update genesis.json with miner alloc
-
-Replace `YOUR_ADDRESS_WITHOUT_0x` with the actual address (no `0x` prefix):
-
-```bash
-python3 -c "
-import json
-with open('/home/ovextech/ethereum-pow-blockchain/genesis.json') as f:
-    g = json.load(f)
-g['alloc'] = {'YOUR_ADDRESS_WITHOUT_0x': {'balance': '1000000000000000000000000'}}
-with open('/home/ovextech/ethereum-pow-blockchain/genesis.json', 'w') as f:
-    json.dump(g, f, indent=2)
-print('Done')
-"
-```
-
-### 4.9 — Create RPC account (node2)
+### 7.9 — Create RPC account (node2)
 
 ```bash
 $GETH account new --datadir ~/ethereum-pow-blockchain/node2
 ```
 
-### 4.10 — Initialize both nodes
+### 7.10 — Initialize both nodes
 
 ```bash
 GETH=~/go-ethereum-pow/build/bin/geth
-
 $GETH --datadir ~/ethereum-pow-blockchain/node1 init ~/ethereum-pow-blockchain/genesis.json
 $GETH --datadir ~/ethereum-pow-blockchain/node2 init ~/ethereum-pow-blockchain/genesis.json
 ```
 
-Both must print:
-```
-Successfully wrote genesis state    database=chaindata    hash=XXXXXX..XXXXXX
-```
+Both must print `Successfully wrote genesis state` with the **same hash**.
 
-Both must show the **same hash** — this confirms they share the same genesis block.
+### 7.11 — Clone and deploy Uniswap V3
+
+```bash
+git clone https://github.com/OrbitOne-Finance/Uniswap_Dex_Deployment.git
+cd Uniswap_Dex_Deployment
+npm ci
+
+cat > .env << 'EOF'
+MYNEWCHAIN_URL=http://127.0.0.1:8545
+MYNEWCHAIN_CHAIN_ID=5356
+MYNEWCHAIN_PRIVATE_KEY=0x8fd14eaa99bf3e15c56f9bc45cea1b9bbce8fc35dc70d984d10a027462280ed8
+NATIVE_CURRENCY_SYMBOL=NKM
+DEPLOY_CONFIRMATIONS=1
+EOF
+
+npm run check       # run tests first
+npm run deploy:chain  # deploy to your chain
+```
 
 ---
 
-## 5. genesis.json — Rules and Structure
+## 8. genesis.json — Rules and Structure
+
+Current genesis.json for Nakamoto Coefficient Chain:
 
 ```json
 {
   "config": {
-    "chainId": 12345,           ← your unique chain ID (avoid 1/56/137 — those are mainnets)
-    "homesteadBlock": 0,        ← enable all EVM upgrades from block 0
+    "chainId": 5356,            ← Nakamoto Coefficient chain ID
+    "homesteadBlock": 0,        ← all EVM upgrades active from block 0
     "eip150Block": 0,
     "eip155Block": 0,
     "eip158Block": 0,
@@ -258,52 +368,53 @@ Both must show the **same hash** — this confirms they share the same genesis b
     "istanbulBlock": 0,
     "berlinBlock": 0,
     "londonBlock": 0,
-    "ethash": {}                ← ✅ REQUIRED — tells Geth to use Ethash PoW
+    "ethash": {}                ← ✅ REQUIRED — Ethash PoW consensus
   },
-  "difficulty": "0x400",        ← low difficulty so mining starts fast locally
-  "gasLimit": "0x8000000",      ← 134 million gas per block
-  "extraData": "0x000...000",   ← exactly 32 zero bytes (required format)
+  "difficulty": "0x400",        ← low = fast blocks (10-20s)
+  "gasLimit": "0x1C9C380",      ← 30M gas per block (same as ETH mainnet)
+  "extraData": "0x000...000",   ← exactly 32 zero bytes
   "alloc": {
-    "ADDRESS_WITHOUT_0x": {     ← pre-fund your miner account
-      "balance": "1000000000000000000000000"   ← in Wei (= 1,000,000 ETH)
+    "80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": {
+      "balance": "20000000000000000000000000"   ← 20M NKM in Wei
     }
   }
 }
 ```
 
-### What NOT to include in genesis.json
+### What NOT to include
 
 | Field | Why to exclude |
 |-------|---------------|
-| `"terminalTotalDifficulty": 0` | Triggers the Merge immediately — chain becomes PoS, mining stops |
-| `"terminalTotalDifficulty": any_value` | Same problem unless set astronomically high |
-| `"mergeNetsplitBlock"` | Merge-related, avoid entirely |
-| `"shanghaiTime"` | Post-merge upgrade, not compatible with v1.10.26 |
+| `"terminalTotalDifficulty": 0` | Triggers the Merge — chain becomes PoS |
+| `"terminalTotalDifficulty": any` | Same problem |
+| `"mergeNetsplitBlock"` | Merge-related, avoid |
+| `"shanghaiTime"` | Post-merge, not compatible with v1.10.26 |
 
-### Rules for alloc addresses
+### Alloc address rules
 
 ```json
 ✅ CORRECT — no 0x, address in quotes:
-"alloc": {
-    "80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": {
-        "balance": "1000000000000000000000000"
-    }
-}
+"alloc": { "80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": { "balance": "20000000000000000000000000" } }
 
-❌ WRONG — 0x prefix not allowed here:
-"alloc": {
-    "0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": { ... }
-}
-
-❌ WRONG — must be a string (quotes required):
-"alloc": {
-    0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2: { ... }
-}
+❌ WRONG — 0x prefix not allowed:
+"alloc": { "0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2": { ... } }
 ```
+
+### Balance values
+
+| Amount | Wei value |
+|--------|-----------|
+| 1 NKM | `1000000000000000000` |
+| 1,000 NKM | `1000000000000000000000` |
+| 1,000,000 NKM | `1000000000000000000000000` |
+| 20,000,000 NKM | `20000000000000000000000000` |
 
 ### Reinitializing after genesis changes
 
 ```bash
+# Stop nodes first
+sudo pkill -f geth && sleep 2
+
 # Delete chain database only — NEVER delete keystore
 rm -rf ~/ethereum-pow-blockchain/node1/geth
 rm -rf ~/ethereum-pow-blockchain/node2/geth
@@ -316,11 +427,11 @@ $GETH --datadir ~/ethereum-pow-blockchain/node2 init ~/ethereum-pow-blockchain/g
 
 ---
 
-## 6. Starting the Nodes
+## 9. Starting the Nodes
 
-Both nodes run in the background using `nohup`. Logs go to files you can check anytime.
+Both nodes run in the background using `nohup`. Logs go to files.
 
-### Kill everything and free all ports (run this before starting)
+### Kill everything and free all ports first
 
 ```bash
 sudo pkill -f geth
@@ -330,21 +441,23 @@ sudo fuser -k 8546/tcp 2>/dev/null
 sudo fuser -k 30303/tcp 2>/dev/null
 sudo fuser -k 30304/tcp 2>/dev/null
 
-# Verify all clear — should return nothing
+# Verify all clear
 sudo ss -tlnp | grep -E '8545|8546|30303|30304'
 ```
 
-### Start node1 — Miner (background, logs to node1.log)
+### Start node1 — Miner
 
 ```bash
 nohup ~/go-ethereum-pow/build/bin/geth \
   --datadir ~/ethereum-pow-blockchain/node1 \
-  --networkid 12345 \
+  --networkid 5356 \
   --port 30303 \
   --http \
   --http.addr 0.0.0.0 \
   --http.port 8545 \
   --http.api admin,eth,miner,net,web3,personal \
+  --http.corsdomain "*" \
+  --http.vhosts "*" \
   --allow-insecure-unlock \
   --mine \
   --miner.threads 1 \
@@ -356,21 +469,25 @@ nohup ~/go-ethereum-pow/build/bin/geth \
 echo "Node1 PID: $!"
 ```
 
-### Start node2 — RPC (background, logs to node2.log)
+### Start node2 — RPC (public-facing)
 
-> ⚠️ Note `--authrpc.port 8552` — this is required because node1 already uses the default auth port 8551.
+> ⚠️ `--authrpc.port 8552` is required — node1 already uses default auth port 8551.
+> ⚠️ `--http.corsdomain "*"` and `--http.vhosts "*"` are required for MetaMask to connect.
+> ⚠️ Update the enode if node1 was restarted — get fresh enode from `admin.nodeInfo.enode`.
 
 ```bash
 nohup ~/go-ethereum-pow/build/bin/geth \
   --datadir ~/ethereum-pow-blockchain/node2 \
-  --networkid 12345 \
+  --networkid 5356 \
   --port 30304 \
   --http \
   --http.addr 0.0.0.0 \
   --http.port 8546 \
   --http.api admin,eth,net,web3,personal \
+  --http.corsdomain "*" \
+  --http.vhosts "*" \
   --authrpc.port 8552 \
-  --bootnodes "enode://e0ca7d0dbe1b94b62d5d54d2f39c514812077713efed269fb6446d9269a1be1c21ceb8c3402046d89ec55eef79bd43a31c34114fa58f48401f775ca329bc9f13@127.0.0.1:30303" \
+  --bootnodes "enode://ea8ec493fc81c03770af9021bc8147921270c6fd13536db9c71c0244746eda26969d9fd1da553a4365d7d1c313f17e9005026c369c004ab1472be718138624c9@127.0.0.1:30303" \
   > ~/ethereum-pow-blockchain/node2.log 2>&1 &
 
 echo "Node2 PID: $!"
@@ -381,271 +498,163 @@ echo "Node2 PID: $!"
 ```bash
 tail -f ~/ethereum-pow-blockchain/node1.log
 tail -f ~/ethereum-pow-blockchain/node2.log
-# Press Ctrl+C to stop watching
+# Ctrl+C to stop
 ```
 
 ---
 
-## 7. Connecting the Nodes
+## 10. Connecting the Nodes
 
-The `--bootnodes` flag handles connection automatically at startup. If node2 still shows 0 peers after 30 seconds, add the peer manually via IPC:
+The `--bootnodes` flag connects automatically. If node2 shows 0 peers after 30 seconds:
 
 ```bash
-# Attach to node2 IPC
+# Step 1: get fresh enode from node1
+~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node1/geth.ipc
+# Inside console:
+admin.nodeInfo.enode
+# Copy the output, then:
+exit
+
+# Step 2: add peer to node2 manually
 ~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node2/geth.ipc
-
-# Inside the console:
-admin.addPeer("enode://e0ca7d0dbe1b94b62d5d54d2f39c514812077713efed269fb6446d9269a1be1c21ceb8c3402046d89ec55eef79bd43a31c34114fa58f48401f775ca329bc9f13@127.0.0.1:30303")
-
-# Verify
-admin.peers
-# exit
+# Inside console — paste YOUR enode with 127.0.0.1:
+admin.addPeer("enode://PASTE_NODE1_ENODE_HERE@127.0.0.1:30303")
+# Verify:
+admin.peers   # should show node1
 exit
 ```
 
+> ⚠️ Always use `127.0.0.1` (not the public IP) in the enode when both nodes are on the same server.
+
 ---
 
-## 8. RPC Commands Reference
+## 11. RPC Commands Reference
 
-All commands below work as `curl` HTTP calls to either node. Node1 is on port `8545`, node2 on `8546`.
+All commands work as curl HTTP calls. Node1 = port `8545`, Node2 = port `8546`.
 
 ### Format
 
 ```bash
 curl -s -X POST http://127.0.0.1:PORT \
   -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"METHOD_NAME","params":[PARAMS],"id":1}'
+  --data '{"jsonrpc":"2.0","method":"METHOD","params":[PARAMS],"id":1}'
 ```
 
 ---
 
 ### Block and Chain Info
 
-#### Get current block number (hex)
 ```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Current block number
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}'
-# Result: {"result":"0x18"} → 0x18 = 24 in decimal
-```
 
-#### Get full block by number
-```bash
-# false = only tx hashes, true = full tx objects
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x1", false],"id":1}'
-```
-
-#### Get latest block
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["latest", false],"id":1}'
-```
-
-#### Get block by hash
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["0xBLOCK_HASH", false],"id":1}'
-```
-
-#### Get chain ID
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Chain ID (returns 0x14ec = 5356)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
-# Result: {"result":"0x3039"} → 0x3039 = 12345
-```
 
-#### Get gas price
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Latest block full info
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["latest", false],"id":1}'
+
+# Specific block by number (e.g. block 1)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_getBlockByNumber","params":["0x1", false],"id":1}'
+
+# Block by hash
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_getBlockByHash","params":["0xBLOCK_HASH", false],"id":1}'
+
+# Gas price
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_gasPrice","params":[],"id":1}'
-```
 
-#### Get transaction count in block (number of txs)
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Tx count in latest block
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getBlockTransactionCountByNumber","params":["latest"],"id":1}'
 ```
 
----
-
 ### Account and Balance
 
-#### Get balance of an address (returns Wei in hex)
 ```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# NKM balance of miner (returns Wei hex — divide by 10^18 for NKM)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getBalance","params":["0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2","latest"],"id":1}'
-# Convert Wei to ETH: divide result by 10^18
-```
 
-#### Get transaction count (nonce) of an address
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Nonce (transaction count) of an address
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getTransactionCount","params":["0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2","latest"],"id":1}'
-```
 
-#### Get code at address (for smart contracts — returns 0x if not a contract)
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Check if address is a contract (returns 0x if not)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getCode","params":["0xCONTRACT_ADDRESS","latest"],"id":1}'
 ```
 
----
-
 ### Mining and Network
 
-#### Check if node is mining
 ```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Is node1 mining?
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_mining","params":[],"id":1}'
-# Result: {"result":true} or {"result":false}
-```
 
-#### Get miner hashrate
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Miner hashrate
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_hashrate","params":[],"id":1}'
-# Result in hashes/sec (hex)
-```
 
-#### Get coinbase (miner address)
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Coinbase (miner address)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_coinbase","params":[],"id":1}'
-```
 
-#### Get peer count
-```bash
-curl -s -X POST http://127.0.0.1:8546 \
-  -H "Content-Type: application/json" \
+# Peer count on node2
+curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}'
-# Result: {"result":"0x1"} = 1 peer connected
-```
 
-#### Check if node is listening
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{"jsonrpc":"2.0","method":"net_listening","params":[],"id":1}'
-```
-
-#### Get network ID
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Network ID
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}'
-# Result: {"result":"12345"}
-```
 
-#### Check sync status
-```bash
-curl -s -X POST http://127.0.0.1:8546 \
-  -H "Content-Type: application/json" \
+# Sync status (false = fully synced)
+curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}'
-# false = fully synced
-# {startingBlock, currentBlock, highestBlock} = syncing in progress
-```
 
-#### Get Geth client version
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Geth client version
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}'
 ```
 
----
-
 ### Transactions
 
-#### Send raw signed transaction
 ```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Send signed raw transaction
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xSIGNED_TX_HEX"],"id":1}'
-```
 
-#### Get transaction by hash
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Get transaction by hash
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getTransactionByHash","params":["0xTX_HASH"],"id":1}'
-```
 
-#### Get transaction receipt (confirms if tx was mined)
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
+# Get transaction receipt (null = not mined yet)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"eth_getTransactionReceipt","params":["0xTX_HASH"],"id":1}'
-# null = not mined yet
-# object with blockNumber = confirmed
-```
 
-#### Estimate gas for a transaction
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{
-    "jsonrpc":"2.0",
-    "method":"eth_estimateGas",
-    "params":[{
-      "from": "0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2",
-      "to": "0x7cc201Dcd87Dbbe7762b8Db914367D27478202e0",
-      "value": "0xDE0B6B3A7640000"
-    }],
-    "id":1
-  }'
-```
+# Estimate gas
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_estimateGas","params":[{"from":"0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2","to":"0x7cc201Dcd87Dbbe7762b8Db914367D27478202e0","value":"0xDE0B6B3A7640000"}],"id":1}'
 
-#### Call a contract read function (no gas, no tx)
-```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{
-    "jsonrpc":"2.0",
-    "method":"eth_call",
-    "params":[{
-      "to": "0xCONTRACT_ADDRESS",
-      "data": "0xFUNCTION_SELECTOR"
-    }, "latest"],
-    "id":1
-  }'
+# Call contract read function (no gas)
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_call","params":[{"to":"0xCONTRACT_ADDRESS","data":"0xFUNCTION_SELECTOR"},"latest"],"id":1}'
 ```
-
----
 
 ### Logs and Events
 
-#### Get logs (events) from a contract
 ```bash
-curl -s -X POST http://127.0.0.1:8545 \
-  -H "Content-Type: application/json" \
-  --data '{
-    "jsonrpc":"2.0",
-    "method":"eth_getLogs",
-    "params":[{
-      "fromBlock": "0x0",
-      "toBlock": "latest",
-      "address": "0xCONTRACT_ADDRESS"
-    }],
-    "id":1
-  }'
+# Get all logs from a contract
+curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" \
+  --data '{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0x0","toBlock":"latest","address":"0xCONTRACT_ADDRESS"}],"id":1}'
 ```
 
----
-
-### IPC Console Commands (attach to node directly)
+### IPC Console (attach directly to node)
 
 ```bash
 # Attach to node1
@@ -655,33 +664,32 @@ curl -s -X POST http://127.0.0.1:8545 \
 ~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node2/geth.ipc
 ```
 
-Once inside the console:
+Inside the console:
 
 ```javascript
-eth.blockNumber                          // current block
-eth.mining                               // is node mining?
-eth.hashrate                             // mining speed
-eth.coinbase                             // miner address
-eth.getBalance("0xADDRESS")             // balance in Wei
-web3.fromWei(eth.getBalance("0xADDRESS"), "ether")   // balance in ETH
-eth.getBlock("latest")                   // latest block details
-eth.getBlock(5)                          // block number 5
-eth.getTransaction("0xTX_HASH")          // tx details
-eth.getTransactionReceipt("0xTX_HASH")  // tx receipt
-net.peerCount                            // number of connected peers
-admin.peers                              // detailed peer info
-admin.nodeInfo                           // this node's enode and info
-admin.nodeInfo.enode                     // just the enode string
-miner.start(1)                           // start mining (1 thread)
-miner.stop()                             // stop mining
-miner.setEtherbase("0xADDRESS")         // set mining reward address
-personal.listAccounts                    // list all accounts
-personal.unlockAccount("0xADDR","pass",0)  // unlock account forever
+eth.blockNumber                                          // current block
+eth.mining                                               // is mining?
+eth.hashrate                                             // hash/sec
+eth.coinbase                                             // miner address
+eth.getBalance("0xADDRESS")                             // balance in Wei
+web3.fromWei(eth.getBalance("0xADDRESS"), "ether")      // balance in NKM
+eth.getBlock("latest")                                   // latest block
+eth.getBlock(5)                                          // block #5
+eth.getTransaction("0xTX_HASH")                          // tx details
+eth.getTransactionReceipt("0xTX_HASH")                  // tx receipt
+net.peerCount                                            // peer count
+admin.peers                                              // peer details
+admin.nodeInfo.enode                                     // this node's enode
+miner.start(1)                                           // start mining
+miner.stop()                                             // stop mining
+miner.setEtherbase("0xADDRESS")                         // set reward address
+personal.listAccounts                                    // list accounts
+personal.unlockAccount("0xADDR", "pass", 0)             // unlock forever
 ```
 
 ---
 
-## 9. Monitoring Commands
+## 12. Monitoring Commands
 
 ### Live dashboard (refreshes every 5 seconds)
 
@@ -692,11 +700,9 @@ echo -n "Node1 block : " && curl -s -X POST http://127.0.0.1:8545 -H "Content-Ty
 echo -n "Node1 mining: " && curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_mining\",\"params\":[],\"id\":1}" | grep -o "true\|false" &&
 echo -n "Node2 block : " && curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_blockNumber\",\"params\":[],\"id\":1}" | grep -o "0x[^\"]*" &&
 echo -n "Node2 peers : " && curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"net_peerCount\",\"params\":[],\"id\":1}" | grep -o "0x[^\"]*" &&
-echo -n "Miner balance (Wei): " && curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2\",\"latest\"],\"id\":1}" | grep -o "0x[^\"]*"
+echo -n "Miner NKM   : " && curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data "{\"jsonrpc\":\"2.0\",\"method\":\"eth_getBalance\",\"params\":[\"0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2\",\"latest\"],\"id\":1}" | grep -o "0x[^\"]*"
 '
 ```
-
-Press `Ctrl+C` to stop.
 
 ### Quick one-time status check
 
@@ -712,15 +718,14 @@ curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" \
   --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}'
 ```
 
-### Watch node logs live
+### Watch logs live
 
 ```bash
-tail -f ~/ethereum-pow-blockchain/node1.log   # miner logs
-tail -f ~/ethereum-pow-blockchain/node2.log   # rpc logs
-# Ctrl+C to stop
+tail -f ~/ethereum-pow-blockchain/node1.log   # miner
+tail -f ~/ethereum-pow-blockchain/node2.log   # rpc
 ```
 
-### Check geth processes are running
+### Check processes are running
 
 ```bash
 ps aux | grep geth | grep -v grep
@@ -728,120 +733,95 @@ ps aux | grep geth | grep -v grep
 
 ---
 
-## 10. Common Errors and Fixes
+## 13. Common Errors and Fixes
 
 ### Error: `No such file or directory` for geth binary
-
-Repo was cloned with a different name. Correct path is:
-```bash
-~/go-ethereum-pow/build/bin/geth
-```
+Repo cloned with different name. Correct path: `~/go-ethereum-pow/build/bin/geth`
 
 ### Error: Bootstrap URL invalid / missing 'enr:' prefix
-
-You used the placeholder text instead of the real enode:
-```bash
-# Wrong
---bootnodes "ENODE_FROM_NODE1_WITH_127.0.0.1"
-
-# Correct — paste the actual enode string
---bootnodes "enode://e0ca7d...@127.0.0.1:30303"
-```
+Used placeholder instead of real enode. Must paste actual enode string from `admin.nodeInfo.enode`.
 
 ### Error: `listen tcp 127.0.0.1:8551: bind: address already in use`
+Both nodes default to auth port 8551. Add `--authrpc.port 8552` to node2 only.
 
-Both nodes try to use auth port 8551 by default. Node2 must use a different one.
-Add `--authrpc.port 8552` to the node2 start command:
-```bash
-# Add this flag to node2 only
---authrpc.port 8552
-```
-
-### Error: `HTTP server graceful shutdown timed out` on node2
-
-This happens because port 8546 or 8551 was occupied by a previous crashed instance. Fix:
+### Error: `HTTP server graceful shutdown timed out`
+Port still occupied by previous instance:
 ```bash
 sudo fuser -k 8546/tcp 2>/dev/null
 sudo fuser -k 30304/tcp 2>/dev/null
-# Then restart node2
 ```
 
 ### Error: `Consensus: Beacon` instead of `Consensus: Ethash`
-
-`terminalTotalDifficulty` is in your genesis.json. Remove it, delete both geth databases, and reinitialize.
+`terminalTotalDifficulty` is in genesis.json. Remove it, delete geth databases, reinit.
 
 ### Error: `eth.blockNumber` stuck at 0
-
-DAG is still generating. Check node1 logs:
+DAG still generating. Check:
 ```bash
 grep "Generating DAG" ~/ethereum-pow-blockchain/node1.log | tail -5
 ```
-Wait until `percentage=100` — then mining begins automatically. Takes 2-3 minutes.
+Wait until `percentage=100`.
 
-### Error: `Successfully wrote genesis state` but different hashes
+### Error: Different genesis hashes on node1 and node2
+genesis.json changed between inits. Delete both geth dirs and reinit together.
 
-genesis.json was changed between initializing node1 and node2. Delete both geth directories and re-init both using the exact same genesis.json file.
-
-### Error: `externally-managed-environment` on pip install
-
+### Error: `externally-managed-environment` on pip
 ```bash
-# Use a virtual environment
 python3 -m venv ~/eth-venv
 ~/eth-venv/bin/pip install eth-account
-~/eth-venv/bin/python3 /tmp/your_script.py
+~/eth-venv/bin/python3 /tmp/script.py
 ```
 
-### Error: `EOF when reading a line` in Python script
-
-Don't use heredoc (`<< 'EOF'`) for interactive scripts that use `input()`. Save to a file first:
+### Error: `EOF when reading a line` in Python
+Don't use heredoc for interactive scripts. Save to file first:
 ```bash
 cat > /tmp/script.py << 'PYEOF'
-# your script here
+# content
 PYEOF
 ~/eth-venv/bin/python3 /tmp/script.py
 ```
 
-### Chain accidentally started as mainnet
-
+### Error: Node2 shows 0 peers
+Enode changed after node1 restart. Get fresh enode and addPeer manually:
 ```bash
-rm -rf ~/.ethereum
-rm -rf ~/.ethash
-# Always use --datadir when starting geth
+~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node1/geth.ipc
+# admin.nodeInfo.enode → copy result → exit
+~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node2/geth.ipc
+# admin.addPeer("enode://FRESH_ENODE@127.0.0.1:30303")
 ```
 
-### Node2 shows 0 peers after startup
+### Error: MetaMask can't connect to RPC
+Node2 missing CORS flags. Restart with `--http.corsdomain "*" --http.vhosts "*"`.
 
-The bootnodes flag may not have connected automatically. Manually add the peer:
+### Chain accidentally started as mainnet
 ```bash
-~/go-ethereum-pow/build/bin/geth attach ~/ethereum-pow-blockchain/node2/geth.ipc
-# Inside console:
-admin.addPeer("enode://e0ca7d0dbe1b94b62d5d54d2f39c514812077713efed269fb6446d9269a1be1c21ceb8c3402046d89ec55eef79bd43a31c34114fa58f48401f775ca329bc9f13@127.0.0.1:30303")
+rm -rf ~/.ethereum && rm -rf ~/.ethash
+# Always use --datadir flag
 ```
 
 ---
 
-## 11. Port Reference
+## 14. Port Reference
 
 | Node | Role | P2P Port | RPC Port | Auth RPC Port |
 |------|------|----------|----------|---------------|
-| node1 | Miner | 30303 | 8545 | 8551 (default) |
-| node2 | RPC | 30304 | 8546 | 8552 (custom) |
+| node1 | Miner (internal) | 30303 | 8545 | 8551 (default) |
+| node2 | RPC (public) | 30304 | 8546 | 8552 (custom) |
 
 ---
 
-## 12. Useful References
+## 15. Useful References
 
 | Resource | URL |
 |----------|-----|
 | Geth v1.10.26 release | https://github.com/ethereum/go-ethereum/releases/tag/v1.10.26 |
 | Go 1.21.13 download | https://go.dev/dl/go1.21.13.linux-amd64.tar.gz |
 | Geth JSON-RPC API | https://geth.ethereum.org/docs/interacting-with-geth/rpc |
-| Geth management API | https://geth.ethereum.org/docs/interacting-with-geth/rpc/ns-personal |
 | JSON-RPC spec | https://ethereum.org/en/developers/docs/apis/json-rpc |
+| Uniswap V3 Deployment Repo | https://github.com/OrbitOne-Finance/Uniswap_Dex_Deployment |
 
 ---
 
-## Quick Start (nodes already built and initialized)
+## Quick Start (everything already built and initialized)
 
 ```bash
 # Kill any existing geth
@@ -850,9 +830,10 @@ sudo pkill -f geth && sleep 2
 # Start node1 (miner)
 nohup ~/go-ethereum-pow/build/bin/geth \
   --datadir ~/ethereum-pow-blockchain/node1 \
-  --networkid 12345 --port 30303 \
+  --networkid 5356 --port 30303 \
   --http --http.addr 0.0.0.0 --http.port 8545 \
   --http.api admin,eth,miner,net,web3,personal \
+  --http.corsdomain "*" --http.vhosts "*" \
   --allow-insecure-unlock --mine --miner.threads 1 \
   --miner.etherbase "0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2" \
   --unlock "0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2" \
@@ -861,20 +842,23 @@ nohup ~/go-ethereum-pow/build/bin/geth \
 
 sleep 3
 
-# Start node2 (RPC)
+# Start node2 (RPC) — update enode if node1 was reinstalled
 nohup ~/go-ethereum-pow/build/bin/geth \
   --datadir ~/ethereum-pow-blockchain/node2 \
-  --networkid 12345 --port 30304 \
+  --networkid 5356 --port 30304 \
   --http --http.addr 0.0.0.0 --http.port 8546 \
   --http.api admin,eth,net,web3,personal \
+  --http.corsdomain "*" --http.vhosts "*" \
   --authrpc.port 8552 \
-  --bootnodes "enode://e0ca7d0dbe1b94b62d5d54d2f39c514812077713efed269fb6446d9269a1be1c21ceb8c3402046d89ec55eef79bd43a31c34114fa58f48401f775ca329bc9f13@127.0.0.1:30303" \
+  --bootnodes "enode://ea8ec493fc81c03770af9021bc8147921270c6fd13536db9c71c0244746eda26969d9fd1da553a4365d7d1c313f17e9005026c369c004ab1472be718138624c9@127.0.0.1:30303" \
   > ~/ethereum-pow-blockchain/node2.log 2>&1 &
 
-sleep 5
+sleep 8
 
-# Verify both running
+# Verify
 echo "Node1 mining:" && curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_mining","params":[],"id":1}'
+echo ""
+echo "Chain ID:" && curl -s -X POST http://127.0.0.1:8545 -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
 echo ""
 echo "Node2 peers:" && curl -s -X POST http://127.0.0.1:8546 -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":1}'
 ```
