@@ -142,7 +142,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/mi
   --password /home/ovextech/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
   --mine \
-  --authrpc.port 8551
+  --authrpc.port 8551 \ 
+  --miner.threads 1
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
