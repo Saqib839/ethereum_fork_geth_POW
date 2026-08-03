@@ -149,9 +149,12 @@ Use this if you want a node that serves RPC requests but does not mine.
 ```bash
 geth --datadir ./node1 \
   --networkid 5356 \
-  --rpc --rpcaddr 0.0.0.0 --rpcport 8545 \
-  --rpcapi eth,net,web3,personal,admin \
+  --http --http.addr 0.0.0.0 --http.port 8545 \
+  --http.api eth,net,web3 \
   --port 30303 \
+  --http.corsdomain "*" \
+  --http.vhosts "*" \
+  --bootnodes "enode://<miner-enode>@127.0.0.1:30304"
   console
 ```
 
@@ -164,14 +167,17 @@ Use this for a dedicated mining node that connects to the same chain and mines b
 ```bash
 geth --datadir ./node2 \
   --networkid 5356 \
-  --rpc --rpcaddr 0.0.0.0 --rpcport 8546 \
-  --rpcapi eth,net,web3,personal,miner,admin \
+  --http --http.addr 0.0.0.0 --http.port 8546 \
+  --http.api eth,net,web3,personal,miner,admin \
   --port 30304 \
+  --http.corsdomain "*" \
+  --http.vhosts "*" \
+  --bootnodes "enode://<rpc-enode>@127.0.0.1:30303" \
   --unlock 0xYOUR_ADDRESS \
-  --password ./password.txt \
+  --password /home/your-user/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0xYOUR_ADDRESS \
   --mine \
-  --allow-insecure-unlock \
+  --allow-insecure-unlock
   console
 ```
 
