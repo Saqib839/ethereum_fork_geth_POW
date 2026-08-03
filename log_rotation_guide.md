@@ -45,11 +45,11 @@ EOF
 
 Replace `/your/path/to` with the actual directory where your repository is stored.
 
-For example, if your project is at `/home/your-user/ethereum_fork_geth_POW`, then the config should look like:
+For example, if your project is at `/home/ovextech/ethereum_fork_geth_POW`, then the config should look like:
 
 ```bash
 sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
-/home/your-user/ethereum_fork_geth_POW/logs/*.log {
+/home/ovextech/ethereum_fork_geth_POW/logs/*.log {
     daily
     rotate 7
     compress

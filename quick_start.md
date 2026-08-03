@@ -126,21 +126,21 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/your-user/ethereum_fork_geth_POW
-User=your-user
-Group=your-user
-ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/miner_node1 \
+WorkingDirectory=/home/ovextech/ethereum_fork_geth_POW
+User=ovextech
+Group=ovextech
+ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/miner_node1 \
   --networkid 5356 \
   --port 30304 \
   --bootnodes "enode://<rpc-enode>@127.0.0.1:30303" \
-  --unlock 0xYOUR_ADDRESS \
-  --password /home/your-user/ethereum_fork_geth_POW/password.txt \
-  --miner.etherbase 0xYOUR_ADDRESS \
+  --unlock 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
+  --password /home/ovextech/ethereum_fork_geth_POW/password.txt \
+  --miner.etherbase 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
   --mine
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
-StandardError=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
+StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
+StandardError=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
 
 [Install]
 WantedBy=multi-user.target
@@ -163,10 +163,10 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/your-user/ethereum_fork_geth_POW
-User=your-user
-Group=your-user
-ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/rpc_node1 \
+WorkingDirectory=/home/ovextech/ethereum_fork_geth_POW
+User=ovextech
+Group=ovextech
+ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/rpc_node1 \
   --networkid 5356 \
   --http --http.addr 127.0.0.1 --http.port 8545 \
   --http.api eth,net,web3 \
@@ -176,8 +176,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/r
   --bootnodes "enode://<miner-enode>@127.0.0.1:30304"
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-rpc.log
-StandardError=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-rpc.log
+StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-rpc.log
+StandardError=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-rpc.log
 
 [Install]
 WantedBy=multi-user.target
@@ -185,7 +185,7 @@ WantedBy=multi-user.target
 
 `--http.addr` is set to `127.0.0.1` from the start, since section 7 has you put a reverse proxy in front of it anyway — there's no point ever binding this directly to `0.0.0.0`.
 
-Replace `your-user`, the repository path, `0xYOUR_ADDRESS`, `<miner-enode>`, and `<rpc-enode>` with your actual values.
+Replace `ovextech`, the repository path, `0xYOUR_ADDRESS`, `<miner-enode>`, and `<rpc-enode>` with your actual values.
 
 ### 6.3 Enable and start the services
 
