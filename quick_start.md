@@ -141,7 +141,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/m
   --password /home/your-user/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0xYOUR_ADDRESS \
   --mine \ 
-  --authrpc.port 8551
+  --authrpc.port 8551 \
+  --miner.threads 1
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
