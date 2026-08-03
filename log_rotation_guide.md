@@ -50,6 +50,7 @@ For example, if your project is at `/home/ovextech/ethereum_fork_geth_POW`, then
 ```bash
 sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
 /home/ovextech/ethereum_fork_geth_POW/logs/*.log {
+    su ovextech ovextech
     daily
     rotate 7
     compress
@@ -58,6 +59,10 @@ sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
     copytruncate
 }
 EOF
+```
+
+```bash 
+sudo chown ovextech:ovextech /home/ovextech/ethereum_fork_geth_POW/logs/*.log
 ```
 
 ### Step 4: Test it manually

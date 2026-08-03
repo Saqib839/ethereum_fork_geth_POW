@@ -274,3 +274,52 @@ miner.stop()
 - If you delete the datadir or node key files, the enode changes and you must update the bootnode value again.
 - The RPC node is intentionally separate from the mining node for a cleaner deployment.
 - The miner service now exposes **no RPC surface at all** — `personal`/`miner`/`admin` are only reachable via the local IPC socket, so there's no unlocked-account attack surface to firewall in the first place. The only thing to restrict is the P2P port (see 6.5).
+
+
+
+## Network Health Check
+
+```bash
+RPC=http://127.0.0.1:8545
+
+echo "=============================="
+echo " Ethereum Network Health Check"
+echo "=============================="
+
+echo -n "Client Version : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}' \
+| jq -r '.result'
+
+echo -n "Chain ID       : "
+CHAIN=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2}' | jq -r '.result')
+echo "$CHAIN ($(printf "%d" "$CHAIN"))"
+
+echo -n "Network ID     : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":3}' \
+| jq -r '.result'
+
+echo -n "Latest Block   : "
+BLOCK=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":4}' | jq -r '.result')
+printf "%d\n" "$BLOCK"
+
+echo -n "Peer Count     : "
+PEERS=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":5}' | jq -r '.result')
+printf "%d\n" "$PEERS"
+
+echo -n "Syncing        : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":6}' \
+| jq -r '.result'
+
+echo -n "Mining         : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_mining","params":[],"id":7}' \
+| jq -r '.result'
+
+echo "=============================="
+```
