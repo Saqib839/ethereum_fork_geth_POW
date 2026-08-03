@@ -131,21 +131,23 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ovextech/ethereum_fork_geth_POW
+WorkingDirectory=/home/ovextech/ethereum-pow-blockchain
 User=ovextech
 Group=ovextech
-ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/miner_node1 \
+ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum-pow-blockchain/miner_node1 \
   --networkid 5356 \
   --port 30304 \
-  --bootnodes "enode://<rpc-enode>@127.0.0.1:30303" \
-  --unlock 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
-  --password /home/ovextech/ethereum_fork_geth_POW/password.txt \
-  --miner.etherbase 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
-  --mine
+  --bootnodes "enode://5992612452e8697a788ee662a033a39358c39ae6cd9f8e3fc42d223f73e67256e16c0e2ca1ea3e798dcd251c89599f81b1b9acba282776aa75bcd8cea524212c@127.0.0.1:30303" \
+  --unlock 0x4a8b0ea298383af0d62b572605599d4843fe1c6c \
+  --password /home/ovextech/ethereum-pow-blockchain/password.txt \
+  --miner.etherbase 0x4a8b0ea298383af0d62b572605599d4843fe1c6c \
+  --mine \
+  --authrpc.port 8551 \
+  --miner.threads 1
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
-StandardError=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
+StandardOutput=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-miner.log
+StandardError=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-miner.log
 
 [Install]
 WantedBy=multi-user.target
@@ -168,21 +170,22 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ovextech/ethereum_fork_geth_POW
+WorkingDirectory=/home/ovextech/ethereum-pow-blockchain
 User=ovextech
 Group=ovextech
-ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/rpc_node1 \
+ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum-pow-blockchain/rpc_node1 \
   --networkid 5356 \
   --http --http.addr 127.0.0.1 --http.port 8545 \
   --http.api eth,net,web3 \
   --port 30303 \
   --http.corsdomain "*" \
   --http.vhosts "*" \
-  --bootnodes "enode://<miner-enode>@127.0.0.1:30304"
+  --bootnodes "enode://6d68db1cb4e3d650283032e8dafe6a2e64a8534a1856370759c567ccc38a85bde1efc3d48a1be44f4c4018fbd1d83c6574a4f9abdc0ecd144792ea71be6402f1@127.0.0.1:30304" \
+  --authrpc.port 8552
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-rpc.log
-StandardError=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-rpc.log
+StandardOutput=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-rpc.log
+StandardError=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-rpc.log
 
 [Install]
 WantedBy=multi-user.target
@@ -271,3 +274,51 @@ miner.stop()
 - If you delete the datadir or node key files, the enode changes and you must update the bootnode value again.
 - The RPC node is intentionally separate from the mining node for a cleaner deployment.
 - The miner service now exposes **no RPC surface at all** — `personal`/`miner`/`admin` are only reachable via the local IPC socket, so there's no unlocked-account attack surface to firewall in the first place. The only thing to restrict is the P2P port (see 6.5).
+
+
+## Network Health Check
+
+```bash
+RPC=http://127.0.0.1:8545
+
+echo "=============================="
+echo " Ethereum Network Health Check"
+echo "=============================="
+
+echo -n "Client Version : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"web3_clientVersion","params":[],"id":1}' \
+| jq -r '.result'
+
+echo -n "Chain ID       : "
+CHAIN=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":2}' | jq -r '.result')
+echo "$CHAIN ($(printf "%d" "$CHAIN"))"
+
+echo -n "Network ID     : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":3}' \
+| jq -r '.result'
+
+echo -n "Latest Block   : "
+BLOCK=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":4}' | jq -r '.result')
+printf "%d\n" "$BLOCK"
+
+echo -n "Peer Count     : "
+PEERS=$(curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"net_peerCount","params":[],"id":5}' | jq -r '.result')
+printf "%d\n" "$PEERS"
+
+echo -n "Syncing        : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":6}' \
+| jq -r '.result'
+
+echo -n "Mining         : "
+curl -s -X POST $RPC -H "Content-Type: application/json" \
+--data '{"jsonrpc":"2.0","method":"eth_mining","params":[],"id":7}' \
+| jq -r '.result'
+
+echo "=============================="
+```
