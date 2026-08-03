@@ -3,8 +3,8 @@
 Fast-start guide for launching a private Ethereum PoW chain in production with Geth v1.10.26-stable.
 
 Setup:
-- one RPC-only node
-- one separate mining node
+- one RPC-only node (public-facing, via reverse proxy)
+- one separate mining node (no RPC surface — local-only via IPC)
 
 This keeps roles simple and avoids mixing wallet unlocks/mining into the RPC node.
 
@@ -40,20 +40,18 @@ mkdir -p ./rpc_node1 ./miner_node1 ./logs
 
 ## 3. Create the miner account
 
-```bash
-geth account new --datadir ./miner_node1
-```
-
-Save the generated address — you'll use it in the systemd service below.
-
-Create the password file if it doesn't already exist:
+Create the password file **first**, so the account is created non-interactively and there's no chance of the on-disk password mismatching what you typed:
 
 ```bash
 printf 'your-password-here\n' > password.txt
 chmod 600 password.txt
 ```
 
-> **Important:** the password in this file must exactly match the one you entered interactively when running `geth account new` above — it's what `--unlock`/`--password` will use to decrypt the keystore in the miner service.
+```bash
+geth account new --datadir ./miner_node1 --password ./password.txt
+```
+
+Save the generated address — you'll use it in the systemd service below.
 
 ---
 
@@ -111,13 +109,8 @@ You now have both enodes: the miner's goes into `--bootnodes` on the **RPC** ser
 
 ## 6. Production systemd services
 
-### 6.1 Create the logs directory
+### 6.1 Create the mining service
 
-```bash
-mkdir -p ./logs
-```
-
-### 6.2 Create the mining service
 Create a file named:
 
 ```bash
@@ -138,17 +131,12 @@ User=your-user
 Group=your-user
 ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/miner_node1 \
   --networkid 5356 \
-  --http --http.addr 0.0.0.0 --http.port 8546 \
-  --http.api eth,net,web3,personal,miner,admin \
   --port 30304 \
-  --http.corsdomain "*" \
-  --http.vhosts "*" \
   --bootnodes "enode://<rpc-enode>@127.0.0.1:30303" \
   --unlock 0xYOUR_ADDRESS \
   --password /home/your-user/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0xYOUR_ADDRESS \
-  --mine \
-  --allow-insecure-unlock
+  --mine
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
@@ -158,7 +146,10 @@ StandardError=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
 WantedBy=multi-user.target
 ```
 
-### 6.3 Create the RPC service
+**Deliberately no `--http*` flags and no `--allow-insecure-unlock` here.** The miner doesn't need an RPC surface in production — you control it locally via IPC (see section 8), and dropping HTTP entirely means there's no listening admin/personal/miner API to expose by mistake, regardless of firewall state.
+
+### 6.2 Create the RPC service
+
 ```bash
 sudo nano /etc/systemd/system/geth-rpc.service
 ```
@@ -177,7 +168,7 @@ User=your-user
 Group=your-user
 ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/rpc_node1 \
   --networkid 5356 \
-  --http --http.addr 0.0.0.0 --http.port 8545 \
+  --http --http.addr 127.0.0.1 --http.port 8545 \
   --http.api eth,net,web3 \
   --port 30303 \
   --http.corsdomain "*" \
@@ -192,9 +183,11 @@ StandardError=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-rpc.log
 WantedBy=multi-user.target
 ```
 
+`--http.addr` is set to `127.0.0.1` from the start, since section 7 has you put a reverse proxy in front of it anyway — there's no point ever binding this directly to `0.0.0.0`.
+
 Replace `your-user`, the repository path, `0xYOUR_ADDRESS`, `<miner-enode>`, and `<rpc-enode>` with your actual values.
 
-### 6.4 Enable and start the services
+### 6.3 Enable and start the services
 
 ```bash
 sudo systemctl daemon-reload
@@ -204,11 +197,21 @@ sudo systemctl start geth-miner.service
 sudo systemctl start geth-rpc.service
 ```
 
-### 6.5 Check status
+### 6.4 Check status
 
 ```bash
 sudo systemctl status geth-miner.service
 sudo systemctl status geth-rpc.service
+```
+
+### 6.5 Lock down the miner's P2P port
+
+The miner's only open network surface now is the P2P port (`30304`), which needs to stay reachable for peer discovery — but only from the RPC node, not the whole internet. If both nodes are on the same server this is moot (traffic stays on `127.0.0.1`). If they're on separate machines, restrict it, e.g. with `ufw`:
+
+```bash
+sudo ufw allow from <rpc-node-ip> to any port 30304 proto tcp
+sudo ufw allow from <rpc-node-ip> to any port 30304 proto udp
+sudo ufw deny 30304
 ```
 
 ---
@@ -217,7 +220,7 @@ sudo systemctl status geth-rpc.service
 
 The RPC node (not the miner) is the one you point wallets at. To expose it safely:
 
-- **Put a reverse proxy (nginx, Caddy, etc.) in front of it** on 443 with a TLS cert, forwarding to `127.0.0.1:8545`. Don't put port 8545 directly on the internet — bind geth's `--http.addr` to `127.0.0.1` instead of `0.0.0.0` once the proxy is in place, so only the proxy can reach it.
+- **Put a reverse proxy (nginx, Caddy, etc.) in front of it** on 443 with a TLS cert, forwarding to `127.0.0.1:8545`. Don't put port 8545 directly on the internet — `--http.addr` is already bound to `127.0.0.1` in section 6.2, so only the proxy (running on the same host) can reach it.
 - **`--http.api` should stay `eth,net,web3`** on this public node (already set above) — that's everything MetaMask needs. You still have full `admin`/`personal` access locally via `geth attach ./rpc_node1/geth.ipc`, since IPC isn't restricted by `--http.api`.
 - **`--http.corsdomain "*"`** is needed so browser wallets can call in from any dApp origin — keep it, or narrow it to specific domains if you control which sites will connect.
 - **`--http.vhosts`** should include whatever hostname the proxy forwards with (or keep `"*"` if you're not picky about the `Host` header).
@@ -248,7 +251,7 @@ eth.chainId()
 eth.getBlock("latest")
 ```
 
-Mining controls:
+Mining controls (run from the miner's IPC console):
 
 ```js
 miner.start()
@@ -257,9 +260,9 @@ miner.stop()
 
 ---
 
-## 8. Notes
+## 9. Notes
 
 - Keep the same datadir and node key files if you want stable discovery after restart.
 - If you delete the datadir or node key files, the enode changes and you must update the bootnode value again.
 - The RPC node is intentionally separate from the mining node for a cleaner deployment.
-- The miner service exposes `personal`, `miner`, and `admin` over RPC on `0.0.0.0` with an unlocked account — restrict this to a firewall/VPN in production, since it's a much more sensitive attack surface than the RPC node.
+- The miner service now exposes **no RPC surface at all** — `personal`/`miner`/`admin` are only reachable via the local IPC socket, so there's no unlocked-account attack surface to firewall in the first place. The only thing to restrict is the P2P port (see 6.5).
