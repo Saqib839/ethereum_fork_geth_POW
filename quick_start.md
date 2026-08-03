@@ -33,7 +33,7 @@ Expected output should begin with:
 ## 2. Create the working directories
 
 ```bash
-mkdir -p ./node1 ./node2 ./logs
+mkdir -p ./rpc_node1 ./miner_node1 ./logs
 ```
 
 ---
@@ -41,7 +41,7 @@ mkdir -p ./node1 ./node2 ./logs
 ## 3. Create the miner account
 
 ```bash
-geth account new --datadir ./node2
+geth account new --datadir ./miner_node1
 ```
 
 Save the generated address — you'll use it in the systemd service below.
@@ -59,17 +59,14 @@ chmod 600 password.txt
 
 ## 4. Initialize the chain
 
+If starting over from scratch, wipe old data first:
 ```bash
-geth init --datadir ./node1 genesis.json
-geth init --datadir ./node2 genesis.json
+rm -rf ./rpc_node1/geth ./rpc_node1/keystore ./miner_node1/geth ./miner_node1/keystore
 ```
 
-If starting over from scratch, wipe old data first:
-
 ```bash
-rm -rf ./node1/geth ./node1/keystore ./node2/geth ./node2/keystore
-geth init --datadir ./node1 genesis.json
-geth init --datadir ./node2 genesis.json
+geth init --datadir ./rpc_node1 genesis.json
+geth init --datadir ./miner_node1 genesis.json
 ```
 
 ---
@@ -82,7 +79,7 @@ An enode is generated from a node's own node key (`<datadir>/geth/nodekey`), cre
 
 ```bash
 # 1. Start the miner alone, briefly
-geth --datadir ./node2 --networkid 5356 --port 30304 console
+geth --datadir ./miner_node1 --networkid 5356 --port 30304 console
 ```
 
 Inside the console:
@@ -101,7 +98,7 @@ Copy the `<pubkey>` portion (between `enode://` and `@`), then exit with `exit`.
 
 ```bash
 # 2. Now start the RPC node alone, briefly
-geth --datadir ./node1 --networkid 5356 --port 30303 console
+geth --datadir ./rpc_node1 --networkid 5356 --port 30303 console
 ```
 
 Run `admin.nodeInfo.enode` again, copy its pubkey, and `exit`.
@@ -139,7 +136,7 @@ Type=simple
 WorkingDirectory=/home/your-user/ethereum_fork_geth_POW
 User=your-user
 Group=your-user
-ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/node2 \
+ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/miner_node1 \
   --networkid 5356 \
   --http --http.addr 0.0.0.0 --http.port 8546 \
   --http.api eth,net,web3,personal,miner,admin \
@@ -178,7 +175,7 @@ Type=simple
 WorkingDirectory=/home/your-user/ethereum_fork_geth_POW
 User=your-user
 Group=your-user
-ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/node1 \
+ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/rpc_node1 \
   --networkid 5356 \
   --http --http.addr 0.0.0.0 --http.port 8545 \
   --http.api eth,net,web3 \
@@ -221,7 +218,7 @@ sudo systemctl status geth-rpc.service
 The RPC node (not the miner) is the one you point wallets at. To expose it safely:
 
 - **Put a reverse proxy (nginx, Caddy, etc.) in front of it** on 443 with a TLS cert, forwarding to `127.0.0.1:8545`. Don't put port 8545 directly on the internet — bind geth's `--http.addr` to `127.0.0.1` instead of `0.0.0.0` once the proxy is in place, so only the proxy can reach it.
-- **`--http.api` should stay `eth,net,web3`** on this public node (already set above) — that's everything MetaMask needs. You still have full `admin`/`personal` access locally via `geth attach ./node1/geth.ipc`, since IPC isn't restricted by `--http.api`.
+- **`--http.api` should stay `eth,net,web3`** on this public node (already set above) — that's everything MetaMask needs. You still have full `admin`/`personal` access locally via `geth attach ./rpc_node1/geth.ipc`, since IPC isn't restricted by `--http.api`.
 - **`--http.corsdomain "*"`** is needed so browser wallets can call in from any dApp origin — keep it, or narrow it to specific domains if you control which sites will connect.
 - **`--http.vhosts`** should include whatever hostname the proxy forwards with (or keep `"*"` if you're not picky about the `Host` header).
 - **Consider rate-limiting at the proxy** — a public RPC endpoint is an open door to spam/DoS once the address is known.
@@ -234,13 +231,13 @@ The RPC node (not the miner) is the one you point wallets at. To expose it safel
 Attach to the miner:
 
 ```bash
-geth attach ./node2/geth.ipc
+geth attach ./miner_node1/geth.ipc
 ```
 
 Attach to the RPC node:
 
 ```bash
-geth attach ./node1/geth.ipc
+geth attach ./rpc_node1/geth.ipc
 ```
 
 Check the chain:

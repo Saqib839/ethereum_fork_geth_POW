@@ -14,7 +14,8 @@ This repository contains a private Ethereum network configuration for running a 
 6. [Start the Node](#6-start-the-node)
 7. [Useful Commands](#7-useful-commands)
 8. [Import an Existing Wallet Key](#8-import-an-existing-wallet-key)
-9. [Troubleshooting](#9-troubleshooting)
+9. [Get Enode](#9-get-both-nodes-enodes)
+10. [Troubleshooting](#9-troubleshooting)
 
 ---
 
@@ -260,7 +261,45 @@ This will create a keystore entry for the imported account.
 
 ---
 
-## 9. Troubleshooting
+## 9. Get both nodes' enodes
+
+Each node needs the *other's* enode as a bootnode, so they can rediscover each other even if one restarts.
+
+An enode is generated from a node's own node key (`<datadir>/geth/nodekey`), created the first time that node starts up — this does **not** require the other node to be running. So do this one node at a time, in any order:
+
+```bash
+# 1. Start the miner alone, briefly
+geth --datadir ./node2 --networkid 5356 --port 30304 console
+```
+
+Inside the console:
+
+```js
+admin.nodeInfo.enode
+```
+
+It will print something like:
+
+```text
+enode://a1b2c3...@[::]:30304
+```
+
+Copy the `<pubkey>` portion (between `enode://` and `@`), then exit with `exit`.
+
+```bash
+# 2. Now start the RPC node alone, briefly
+geth --datadir ./node1 --networkid 5356 --port 30303 console
+```
+
+Run `admin.nodeInfo.enode` again, copy its pubkey, and `exit`.
+
+You now have both enodes: the miner's goes into `--bootnodes` on the **RPC** service, and the RPC node's goes into `--bootnodes` on the **miner** service (below). The node key persists in each datadir, so these enodes stay valid once you start the real systemd services.
+
+> **Note:** If a node's datadir/node key is ever deleted or regenerated, its enode changes and you must update the bootnode value on the *other* node. Use `127.0.0.1` if both nodes are on the same server, or the real IP if on separate machines.
+
+---
+
+## 10. Troubleshooting
 
 ### Common issues
 
