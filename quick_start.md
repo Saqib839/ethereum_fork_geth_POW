@@ -203,7 +203,10 @@ sudo systemctl enable geth-rpc.service
 sudo systemctl start geth-miner.service
 sudo systemctl start geth-rpc.service
 ```
-
+```bash
+sudo systemctl stop geth-miner.service
+sudo systemctl stop geth-rpc.service
+```
 ### 6.4 Check status
 
 ```bash
