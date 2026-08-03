@@ -140,7 +140,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/m
   --unlock 0xYOUR_ADDRESS \
   --password /home/your-user/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0xYOUR_ADDRESS \
-  --mine
+  --mine \ 
+  --authrpc.port 8551
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-miner.log
@@ -177,7 +178,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/your-user/ethereum_fork_geth_POW/r
   --port 30303 \
   --http.corsdomain "*" \
   --http.vhosts "*" \
-  --bootnodes "enode://<miner-enode>@127.0.0.1:30304"
+  --bootnodes "enode://<miner-enode>@127.0.0.1:30304" \ 
+  --authrpc.port 8552
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/your-user/ethereum_fork_geth_POW/logs/geth-rpc.log
