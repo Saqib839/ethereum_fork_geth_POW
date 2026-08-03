@@ -50,6 +50,10 @@ chmod 600 password.txt
 ```bash
 geth account new --datadir ./miner_node1 --password ./password.txt
 ```
+or use existing private key for wallet
+```bash
+geth account import --datadir ./miner_node1 --password ./password.txt private_key.txt
+```
 
 Save the generated address — you'll use it in the systemd service below.
 
