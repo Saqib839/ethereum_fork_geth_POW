@@ -141,7 +141,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/mi
   --unlock 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
   --password /home/ovextech/ethereum_fork_geth_POW/password.txt \
   --miner.etherbase 0x80a63d2C5cB3D83E3ea235C98Cd64710C43e1EF2 \
-  --mine
+  --mine \
+  --authrpc.port 8551
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-miner.log
@@ -178,7 +179,8 @@ ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum_fork_geth_POW/rp
   --port 30303 \
   --http.corsdomain "*" \
   --http.vhosts "*" \
-  --bootnodes "enode://<miner-enode>@127.0.0.1:30304"
+  --bootnodes "enode://<miner-enode>@127.0.0.1:30304" \
+  --authrpc.port 8552
 Restart=always
 RestartSec=10
 StandardOutput=append:/home/ovextech/ethereum_fork_geth_POW/logs/geth-rpc.log
