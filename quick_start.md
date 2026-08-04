@@ -322,3 +322,14 @@ curl -s -X POST $RPC -H "Content-Type: application/json" \
 
 echo "=============================="
 ```
+
+
+## Unix timestamp
+```bash 
+printf '0x%x\n' $(date +%s)
+```
+
+### Extra data 
+```bash
+printf '0x%064d\n' 0
+```
