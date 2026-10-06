@@ -33,7 +33,7 @@ Expected output should begin with:
 ## 2. Create the working directories
 
 ```bash
-mkdir -p ./rpc_node1 ./miner_node1 ./logs
+mkdir -p ./rpc_node_aws ./miner_node_aws ./logs
 ```
 
 ---
@@ -48,11 +48,11 @@ chmod 600 password.txt
 ```
 
 ```bash
-geth account new --datadir ./miner_node1 --password ./password.txt
+geth account new --datadir ./miner_node_aws --password ./password.txt
 ```
 or use existing private key for wallet
 ```bash
-geth account import --datadir ./miner_node1 --password ./password.txt private_key.txt
+geth account import --datadir ./miner_node_aws --password ./password.txt private_key.txt
 ```
 
 
@@ -64,12 +64,12 @@ Save the generated address — you'll use it in the systemd service below.
 
 If starting over from scratch, wipe old data first:
 ```bash
-rm -rf ./rpc_node1/geth ./rpc_node1/keystore ./miner_node1/geth ./miner_node1/keystore
+rm -rf ./rpc_node_aws/geth ./rpc_node_aws/keystore ./miner_node_aws/geth ./miner_node_aws/keystore
 ```
 
 ```bash
-geth init --datadir ./rpc_node1 genesis.json
-geth init --datadir ./miner_node1 genesis.json
+geth init --datadir ./rpc_node_aws genesis.json
+geth init --datadir ./miner_node_aws genesis.json
 ```
 
 ---
@@ -82,7 +82,7 @@ An enode is generated from a node's own node key (`<datadir>/geth/nodekey`), cre
 
 ```bash
 # 1. Start the miner alone, briefly
-geth --datadir ./miner_node1 --networkid 5356 --port 30304 console
+geth --datadir ./miner_node_aws --networkid 5356 --port 30304 console
 ```
 
 Inside the console:
@@ -101,7 +101,7 @@ Copy the `<pubkey>` portion (between `enode://` and `@`), then exit with `exit`.
 
 ```bash
 # 2. Now start the RPC node alone, briefly
-geth --datadir ./rpc_node1 --networkid 5356 --port 30303 console
+geth --datadir ./rpc_node_aws --networkid 5356 --port 30303 console
 ```
 
 Run `admin.nodeInfo.enode` again, copy its pubkey, and `exit`.
@@ -131,23 +131,23 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ovextech/ethereum-pow-blockchain
-User=ovextech
-Group=ovextech
-ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum-pow-blockchain/miner_node1 \
+WorkingDirectory=/home/ubuntu/ethereum-pow-blockchain
+User=ubuntu
+Group=ubuntu
+ExecStart=~/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/miner_node_aws \
   --networkid 5356 \
   --port 30304 \
-  --bootnodes "enode://5992612452e8697a788ee662a033a39358c39ae6cd9f8e3fc42d223f73e67256e16c0e2ca1ea3e798dcd251c89599f81b1b9acba282776aa75bcd8cea524212c@127.0.0.1:30303" \
-  --unlock 0x4a8b0ea298383af0d62b572605599d4843fe1c6c \
-  --password /home/ovextech/ethereum-pow-blockchain/password.txt \
-  --miner.etherbase 0x4a8b0ea298383af0d62b572605599d4843fe1c6c \
+  --bootnodes "enode://541cb0e3f8d812f2903dc8775ca1b0a193ca58f87e2675477a450981dde38791a651cc99830604b7cba4ad7b8d190691ba23eebabc075a8eae492a3fc292b495@127.0.0.1:30303" \
+  --unlock 0xDA6d26deC4E58cF029402613c3e5401Cb03A1357 \
+  --password /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/password.txt \
+  --miner.etherbase 0x6F31561e578AB49a2E71ad43aEC919F046EcC3bd \
   --mine \
   --authrpc.port 8551 \
   --miner.threads 1
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-miner.log
-StandardError=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-miner.log
+StandardOutput=append:/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/logs/geth-miner.log
+StandardError=append:/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/logs/geth-miner.log
 
 [Install]
 WantedBy=multi-user.target
@@ -170,22 +170,22 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ovextech/ethereum-pow-blockchain
-User=ovextech
-Group=ovextech
-ExecStart=/usr/local/bin/geth --datadir /home/ovextech/ethereum-pow-blockchain/rpc_node1 \
+WorkingDirectory=/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain
+User=ubuntu
+Group=ubuntu
+ExecStart=~/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/rpc_node_aws \
   --networkid 5356 \
   --http --http.addr 127.0.0.1 --http.port 8545 \
   --http.api eth,net,web3 \
   --port 30303 \
   --http.corsdomain "*" \
   --http.vhosts "*" \
-  --bootnodes "enode://6d68db1cb4e3d650283032e8dafe6a2e64a8534a1856370759c567ccc38a85bde1efc3d48a1be44f4c4018fbd1d83c6574a4f9abdc0ecd144792ea71be6402f1@127.0.0.1:30304" \
+  --bootnodes "enode://cc2a54c1c5d7f4c4f64cb4143f686d050f92a326bea33303317002309ad458dcbf9aed2f964ad0830a2e392a212db2f08a70f3264f5e0125c9ac5071f68cc967@127.0.0.1:30304" \
   --authrpc.port 8552
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-rpc.log
-StandardError=append:/home/ovextech/ethereum-pow-blockchain/logs/geth-rpc.log
+StandardOutput=append:/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/logs/geth-rpc.log
+StandardError=append:/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/logs/geth-rpc.log
 
 [Install]
 WantedBy=multi-user.target
@@ -193,7 +193,7 @@ WantedBy=multi-user.target
 
 `--http.addr` is set to `127.0.0.1` from the start, since section 7 has you put a reverse proxy in front of it anyway — there's no point ever binding this directly to `0.0.0.0`.
 
-Replace `ovextech`, the repository path, `0xYOUR_ADDRESS`, `<miner-enode>`, and `<rpc-enode>` with your actual values.
+Replace `ubuntu`, the repository path, `0xYOUR_ADDRESS`, `<miner-enode>`, and `<rpc-enode>` with your actual values.
 
 ### 6.3 Enable and start the services
 
@@ -229,7 +229,7 @@ sudo ufw deny 30304
 The RPC node (not the miner) is the one you point wallets at. To expose it safely:
 
 - **Put a reverse proxy (nginx, Caddy, etc.) in front of it** on 443 with a TLS cert, forwarding to `127.0.0.1:8545`. Don't put port 8545 directly on the internet — `--http.addr` is already bound to `127.0.0.1` in section 6.2, so only the proxy (running on the same host) can reach it.
-- **`--http.api` should stay `eth,net,web3`** on this public node (already set above) — that's everything MetaMask needs. You still have full `admin`/`personal` access locally via `geth attach ./rpc_node1/geth.ipc`, since IPC isn't restricted by `--http.api`.
+- **`--http.api` should stay `eth,net,web3`** on this public node (already set above) — that's everything MetaMask needs. You still have full `admin`/`personal` access locally via `geth attach ./rpc_node_aws/geth.ipc`, since IPC isn't restricted by `--http.api`.
 - **`--http.corsdomain "*"`** is needed so browser wallets can call in from any dApp origin — keep it, or narrow it to specific domains if you control which sites will connect.
 - **`--http.vhosts`** should include whatever hostname the proxy forwards with (or keep `"*"` if you're not picky about the `Host` header).
 - **Consider rate-limiting at the proxy** — a public RPC endpoint is an open door to spam/DoS once the address is known.
@@ -242,13 +242,13 @@ The RPC node (not the miner) is the one you point wallets at. To expose it safel
 Attach to the miner:
 
 ```bash
-geth attach ./miner_node1/geth.ipc
+geth attach ./miner_node_aws/geth.ipc
 ```
 
 Attach to the RPC node:
 
 ```bash
-geth attach ./rpc_node1/geth.ipc
+geth attach ./rpc_node_aws/geth.ipc
 ```
 
 Check the chain:

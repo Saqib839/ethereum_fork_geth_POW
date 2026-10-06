@@ -1,3 +1,5 @@
 logs
 minor_node1
 rpc_node1
+miner_node*
+rpc_node*
