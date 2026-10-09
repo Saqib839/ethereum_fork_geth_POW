@@ -122,6 +122,8 @@ Create a file named:
 sudo nano /etc/systemd/system/geth-miner.service
 ```
 
+Use the absolute path printed by `command -v geth` for `ExecStart` below. Systemd does not expand `~` in `ExecStart`.
+
 Paste the following content for the Miner node:
 
 ```ini
@@ -131,10 +133,10 @@ After=network.target
 
 [Service]
 Type=simple
-WorkingDirectory=/home/ubuntu/ethereum-pow-blockchain
+WorkingDirectory=/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain
 User=ubuntu
 Group=ubuntu
-ExecStart=~/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/miner_node_aws \
+ExecStart=/home/ubuntu/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/miner_node_aws \
   --networkid 5356 \
   --port 30304 \
   --bootnodes "enode://541cb0e3f8d812f2903dc8775ca1b0a193ca58f87e2675477a450981dde38791a651cc99830604b7cba4ad7b8d190691ba23eebabc075a8eae492a3fc292b495@127.0.0.1:30303" \
@@ -173,7 +175,7 @@ Type=simple
 WorkingDirectory=/home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain
 User=ubuntu
 Group=ubuntu
-ExecStart=~/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/rpc_node_aws \
+ExecStart=/home/ubuntu/.local/bin/geth --datadir /home/ubuntu/bitcoinNAK_evm_blockchain/ethereum-pow-blockchain/rpc_node_aws \
   --networkid 5356 \
   --http --http.addr 127.0.0.1 --http.port 8545 \
   --http.api eth,net,web3 \
