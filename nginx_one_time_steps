@@ -1,0 +1,37 @@
+Here are the steps:
+
+1. **Check the DNS target and AWS security group.** At the last check, this VM’s public IP was `16.60.82.161`, while the domain still pointed to `45.249.8.94`. Confirm the VM’s current public or Elastic IP, set the domain’s A record to it, and allow inbound TCP **80 and 443** in the EC2 security group. Check that there’s no stale AAAA record.
+2. **Wait for DNS to resolve to this VM**, then check:
+
+   ```
+   dig +short A rpc.markettrackerx.com
+   dig +short AAAA rpc.markettrackerx.com
+   ```
+3. **Issue the certificate from the VM:**
+
+   ```
+   sudo certbot certonly --webroot \
+     -w /var/www/certbot \
+     -d rpc.markettrackerx.com
+   ```
+
+   The VM already has Nginx’s ACME challenge path configured. Let’s Encrypt’s HTTP-01 validation requires port 80 to be reachable. [Let’s Encrypt challenge requirements](<https://letsencrypt.org/docs/challenge-types/>) and [Certbot webroot instructions](<https://eff-certbot.readthedocs.io/en/stable/using.html#webroot>)
+4. **Enable the HTTPS proxy** by replacing `/etc/nginx/sites-available/rpc.markettrackerx.com` with the HTTPS configuration in ethereum-pow-blockchain/nginx\_rpc\_setup.md, then run:
+
+   ```
+   sudo nginx -t
+   sudo systemctl reload nginx
+   ```
+5. **Verify the endpoint and renewal:**
+
+   ```
+   curl -sS https://rpc.markettrackerx.com \
+     -H 'Content-Type: application/json' \
+     --data '{"jsonrpc":"2.0","method":"eth_chainId","params":[],"id":1}'
+   
+   sudo certbot renew --dry-run
+   ```
+
+   Check the genesis block too: the chain ID alone won’t distinguish the two chains. Until the certificate and HTTPS proxy are enabled, requests may fail: HTTP currently returns 503, and HTTPS has no domain certificate configured yet. Keep Geth’s ports 8545, 8551, and 8552 private.
+
+On your earlier logrotate question: **don’t run `chown ubuntu:ubuntu /logs/*.log`**. The actual logs are under the project’s `logs/` directory and are already owned by `ubuntu`. The current logrotate config also has `su ubuntu ubuntu`; the reported warning concerns directory permissions, so changing ownership of the log files alone won’t address it.
