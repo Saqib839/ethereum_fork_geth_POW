@@ -32,30 +32,37 @@ This repository is a private Ethereum network configuration for running a Proof-
 
 ## 2. Install Geth
 
-### Option A: Download a prebuilt binary
+This repository includes the official Geth **1.10.26** Linux binaries for both supported 64-bit VM architectures:
 
-Download the Geth 1.10.26 binary for your platform from the official Geth releases page and place it in a directory on your `PATH`, such as `/usr/local/bin`.
+| Linux architecture | Repository binary |
+| --- | --- |
+| x86_64 / AMD64 | `bin/geth-linux-amd64` |
+| ARM64 / AArch64 | `bin/geth-linux-arm64` |
 
-### Option B: Build from source
+Run the following from the root of this repository on the target Linux VM. It detects the VM architecture and installs the matching binary as `/usr/local/bin/geth`:
+
+```bash
+case "$(uname -m)" in
+  x86_64|amd64) GETH_BINARY="bin/geth-linux-amd64" ;;
+  aarch64|arm64) GETH_BINARY="bin/geth-linux-arm64" ;;
+  *) echo "Unsupported Linux architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+
+sudo install -m 0755 "$GETH_BINARY" /usr/local/bin/geth
+geth version
+```
+
+The version output should report `1.10.26-stable`. These binaries are for 64-bit Linux; choose a VM with x86_64/AMD64 or ARM64/AArch64 architecture. If you prefer to build from source, use the Geth `v1.10.26` tag:
 
 ```bash
 sudo apt update
 sudo apt install -y golang-go git build-essential
-
 git clone https://github.com/ethereum/go-ethereum.git
 cd go-ethereum
 git checkout v1.10.26
 make geth
-sudo cp build/bin/geth /usr/local/bin/geth
+sudo install -m 0755 build/bin/geth /usr/local/bin/geth
 ```
-
-### Verify the installation
-
-```bash
-geth version
-```
-
-You should see output beginning with `1.10.26`. If `geth` isn't found, run `which geth` and confirm the binary's directory is on your `PATH`.
 
 ---
 
