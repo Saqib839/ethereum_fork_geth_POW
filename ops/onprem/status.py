@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Read local IPC state and optionally compare with a reachable AWS RPC URL."""
 import json
+import os
+import pwd
 from pathlib import Path
 import subprocess
 import sys
@@ -24,9 +26,11 @@ def remote(url, method, params):
 
 
 def ipc(expected, role, expression):
-    result = subprocess.run([
-        'runuser', '-u', expected['service_user'], '--', '/usr/local/lib/ethereum-pow/geth',
-        'attach', '--exec', expression, str(Path(expected['datadirs'][role]) / 'geth.ipc')],
+    args = ['/usr/local/lib/ethereum-pow/geth', 'attach', '--exec', expression,
+            str(Path(expected['datadirs'][role]) / 'geth.ipc')]
+    if os.getuid() != pwd.getpwnam(expected['service_user']).pw_uid:
+        args = ['runuser', '-u', expected['service_user'], '--', *args]
+    result = subprocess.run(args,
         check=True, text=True, capture_output=True, timeout=20)
     return json.loads(json.loads(result.stdout.strip()))
 

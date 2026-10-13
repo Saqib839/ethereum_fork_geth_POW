@@ -29,14 +29,14 @@ The installer uses `rpc_node_onprem/`, `miner_node_onprem/`, and `logs/`. Servic
 ## 4. Check synchronization
 
 ```bash
-sudo python3 ops/onprem/status.py
+python3 ops/onprem/status.py
 tail -n 30 logs/geth-rpc.log logs/geth-miner.log
 ```
 
 Repeat after 30 seconds: heights should advance, `syncing` should become false, and both local nodes should connect directly to AWS. Compare shared block hashes when the AWS HTTPS URL is available:
 
 ```bash
-sudo python3 ops/onprem/status.py https://rpc.markettrackerx.com
+python3 ops/onprem/status.py https://rpc.markettrackerx.com
 ```
 
 Ensure that hostname resolves to your intended AWS VM. Initial sync and mining DAG generation take time. Local peers alone do not prove AWS sync.
