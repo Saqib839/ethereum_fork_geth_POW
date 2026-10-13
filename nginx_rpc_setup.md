@@ -1,5 +1,35 @@
 # Nginx RPC proxy for `rpc.markettrackerx.com`
 
+## Automatic setup installed on 2026-10-13
+
+The VM now has `rpc-https-bootstrap.timer` enabled. Every five minutes,
+`/usr/local/sbin/rpc-https-bootstrap` checks the authoritative DNS server and
+Cloudflare/Google resolvers. Once the A record is exactly `16.60.82.161` and no
+AAAA record exists, it requests a Let's Encrypt certificate using the existing
+ACME webroot, installs `/etc/nginx/rpc-https-ready.conf` as the active RPC site,
+validates Nginx, and reloads it. Failed certificate requests retry at most hourly.
+The previous site is restored if Nginx validation or reload fails.
+
+The HTTPS proxy forwards to `127.0.0.1:8545` and HTTP redirects to HTTPS.
+`certbot.timer` handles renewals, with a deploy hook that validates and reloads
+Nginx. Source files for the installed configuration and automation are in `ops/`.
+Update the script's `expected_ip` if the VM's public IP changes.
+
+Check progress with:
+
+```bash
+sudo journalctl -u rpc-https-bootstrap.service -n 20 --no-pager
+systemctl list-timers rpc-https-bootstrap.timer certbot.timer
+```
+
+At installation, DNS still returned `45.249.8.94`, so certificate issuance and
+end-to-end HTTPS on this VM remain pending. Port 80 must be publicly reachable
+for issuance, and port 443 for HTTPS. The chain mismatch described below still
+exists: cutover will serve the local node's different genesis.
+
+The following sections describe the earlier state and manual setup alternative;
+the installed automation now performs certificate issuance and proxy activation.
+
 This guide prepares Nginx now and finishes the HTTPS proxy after the subdomain points to this server. Geth's HTTP RPC listens only on `127.0.0.1:8545`; Nginx is the only intended public entry point.
 
 ## Current server state

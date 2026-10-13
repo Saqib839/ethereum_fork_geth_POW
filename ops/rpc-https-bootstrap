@@ -1,0 +1,51 @@
+#!/bin/bash
+set -euo pipefail
+domain=rpc.markettrackerx.com
+expected_ip=16.60.82.161
+state=/var/lib/rpc-https-bootstrap
+site=/etc/nginx/sites-available/rpc.markettrackerx.com
+template=/etc/nginx/rpc-https-ready.conf
+cert=/etc/letsencrypt/live/$domain/fullchain.pem
+mkdir -p "$state"
+exec 9>"$state/lock"
+flock -n 9 || exit 0
+
+if [[ ! -s "$cert" ]]; then
+    # Query both authoritative and public DNS before requesting a certificate.
+    for resolver in ns-335.awsdns-41.com 1.1.1.1 8.8.8.8; do
+        actual=$(dig +time=3 +tries=1 +short @"$resolver" "$domain" A)
+        ipv6=$(dig +time=3 +tries=1 +short @"$resolver" "$domain" AAAA)
+        if [[ "$actual" != "$expected_ip" || -n "$ipv6" ]]; then
+            echo "Waiting for DNS at $resolver: A=$actual AAAA=$ipv6; expected $expected_ip with no AAAA"
+            exit 0
+        fi
+    done
+    # Limit failed issuance attempts to once per hour to avoid ACME rate limits.
+    now=$(date +%s)
+    last=0
+    if [[ -f "$state/last-attempt" ]]; then read -r last < "$state/last-attempt"; fi
+    if (( now - last < 3600 )); then
+        echo "Waiting for certificate retry cooldown"
+        exit 0
+    fi
+    printf '%s\n' "$now" > "$state/last-attempt"
+    certbot certonly --non-interactive --agree-tos --register-unsafely-without-email \
+        --webroot -w /var/www/certbot --cert-name "$domain" -d "$domain"
+fi
+
+if ! cmp -s "$site" "$template"; then
+    cp -p "$site" "$state/previous-site.conf"
+    install -m 644 "$template" "$site.pending"
+    mv "$site.pending" "$site"
+    if ! nginx -t; then
+        cp -p "$state/previous-site.conf" "$site"
+        echo "Restored previous configuration after validation failure" >&2
+        exit 1
+    fi
+    if ! systemctl reload nginx; then
+        cp -p "$state/previous-site.conf" "$site"
+        nginx -t && systemctl reload nginx
+        exit 1
+    fi
+fi
+echo "HTTPS RPC configuration active for $domain"

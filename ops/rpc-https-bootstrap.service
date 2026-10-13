@@ -1,0 +1,9 @@
+[Unit]
+Description=Enable RPC HTTPS after DNS cutover
+Wants=network-online.target
+After=network-online.target nginx.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/rpc-https-bootstrap
+TimeoutStartSec=300

@@ -1,0 +1,10 @@
+[Unit]
+Description=Check RPC DNS and finish HTTPS setup every five minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitInactiveSec=5min
+Unit=rpc-https-bootstrap.service
+
+[Install]
+WantedBy=timers.target
