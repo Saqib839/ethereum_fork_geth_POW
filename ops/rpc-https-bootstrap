@@ -11,8 +11,15 @@ exec 9>"$state/lock"
 flock -n 9 || exit 0
 
 if [[ ! -s "$cert" ]]; then
-    # Query both authoritative and public DNS before requesting a certificate.
-    for resolver in ns-335.awsdns-41.com 1.1.1.1 8.8.8.8; do
+    # Discover the current delegated Route 53 nameservers; hosted-zone NS names
+    # can change, and old recursive caches may still hold the previous set.
+    nameservers=$(dig +time=3 +tries=1 +short NS markettrackerx.com | sed 's/\.$//')
+    if [[ -z "$nameservers" ]]; then
+        echo "Waiting for the markettrackerx.com authoritative nameservers"
+        exit 0
+    fi
+    # Check every current authoritative server and public DNS before issuance.
+    for resolver in $nameservers 1.1.1.1 8.8.8.8; do
         actual=$(dig +time=3 +tries=1 +short @"$resolver" "$domain" A)
         ipv6=$(dig +time=3 +tries=1 +short @"$resolver" "$domain" AAAA)
         if [[ "$actual" != "$expected_ip" || -n "$ipv6" ]]; then
