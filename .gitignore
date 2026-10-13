@@ -3,3 +3,7 @@ minor_node1
 rpc_node1
 miner_node*
 rpc_node*
+onprem-config.json
+private_key*.txt
+password.txt
+__pycache__/

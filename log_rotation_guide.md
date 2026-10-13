@@ -1,48 +1,22 @@
-## Automate log rotation with logrotate
+# Log rotation
 
-This guide explains how to rotate every log file inside a dedicated `logs` folder so your node keeps running without filling the disk.
+The node installer creates `logs/geth-rpc.log` and `logs/geth-miner.log`, then installs `/etc/logrotate.d/ethereum-pow-onprem` and enables `ethereum-pow-logrotate.timer`.
 
-### Step 1: Create a logs folder
-
-If you do not already have one, create a folder for your logs:
+Rotation runs **daily**, retains **seven compressed archives**, and uses `copytruncate` so the services continue writing without restarting. A few lines can be lost during copying/truncation.
 
 ```bash
-mkdir -p ./logs
+# Check automatic rotation
+systemctl list-timers ethereum-pow-logrotate.timer
+
+# Rotate immediately
+sudo logrotate -f /etc/logrotate.d/ethereum-pow-onprem
+ls -lh logs/
 ```
 
-### Step 2: Install logrotate
+For manual installation, replace the path and Linux user/group below:
 
-If you want automatic rotation, install `logrotate` if it is not already present:
-
-```bash
-sudo apt update
-sudo apt install -y logrotate
-```
-
-### Step 3: Create a logrotate config for the whole logs folder
-
-Create a config file such as `/etc/logrotate.d/geth`:
-
-```bash
-sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
-/your/path/to/logs/*.log {
-    daily
-    rotate 7
-    compress
-    missingok
-    notifempty
-    copytruncate
-}
-EOF
-```
-
-Replace `/your/path/to` with the actual directory where your repository is stored.
-
-For example, if your project is at `/home/ovextech/ethereum-pow-blockchain`, then the config should look like:
-
-```bash
-sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
-/home/ovextech/ethereum-pow-blockchain/logs/*.log {
+```text
+"/home/ovextech/ethereum-pow-blockchain/logs/*.log" {
     su ovextech ovextech
     daily
     rotate 7
@@ -51,36 +25,6 @@ sudo tee /etc/logrotate.d/geth >/dev/null <<'EOF'
     notifempty
     copytruncate
 }
-EOF
 ```
 
-
-```bash 
-sudo chown ovextech:ovextech /home/ovextech/ethereum-pow-blockchain/logs/*.log
-```
-
-### Step 4: Test it manually
-
-Run:
-
-```bash
-sudo logrotate -f /etc/logrotate.d/geth
-```
-
-### Step 5: Verify rotation
-
-Check the folder contents:
-
-```bash
-ls -lh ./logs
-```
-
-You should see rotated files such as `geth.log.1` or compressed versions depending on the settings.
-
----
-
-## Notes
-
-- `copytruncate` is useful because it preserves the existing log file path while rotating it.
-- This rule matches all `.log` files inside the `logs` folder.
-- If you are using `systemd`, the preferred approach is often to let `journalctl` handle logs rather than a plain text file.
+The installer enables scheduling automatically; use it for this setup.

@@ -1,0 +1,15 @@
+{
+  "aws_miner_host": "16.60.82.161",
+  "aws_rpc_host": "16.60.82.161",
+  "aws_miner_port": 30304,
+  "aws_rpc_port": 30303,
+  "aws_miner_id": "cc2a54c1c5d7f4c4f64cb4143f686d050f92a326bea33303317002309ad458dcbf9aed2f964ad0830a2e392a212db2f08a70f3264f5e0125c9ac5071f68cc967",
+  "aws_rpc_id": "541cb0e3f8d812f2903dc8775ca1b0a193ca58f87e2675477a450981dde38791a651cc99830604b7cba4ad7b8d190691ba23eebabc075a8eae492a3fc292b495",
+  "aws_genesis_hash": "0xdd1301fd0ca034e5f60c87919d01933dcc563333f6064f24d6a256b5f03f9bc8",
+  "genesis_file": "genesis.json",
+  "data_directory": ".",
+  "service_user": "",
+  "miner_reward_address": "0x9aA69b409dA18d8c2A6D49a3C31a71EE84068E79",
+  "advertise_ip": "",
+  "miner_threads": 1
+}
