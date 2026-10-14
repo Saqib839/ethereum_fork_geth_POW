@@ -1,0 +1,19 @@
+[Unit]
+Description=Geth RPC readiness for Route 53 failover
+After=network.target geth-rpc.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+EnvironmentFile=/etc/rpc-health.env
+ExecStart=/usr/bin/python3 /usr/local/libexec/rpc-health-server.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
