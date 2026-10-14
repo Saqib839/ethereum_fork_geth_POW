@@ -1,0 +1,11 @@
+{
+  "IPAddress": "45.249.8.94",
+  "Port": 443,
+  "Type": "HTTPS_STR_MATCH",
+  "ResourcePath": "/healthz",
+  "FullyQualifiedDomainName": "rpc.markettrackerx.com",
+  "SearchString": "rpc-ready",
+  "RequestInterval": 30,
+  "FailureThreshold": 3,
+  "EnableSNI": true
+}

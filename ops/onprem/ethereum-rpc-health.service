@@ -1,0 +1,24 @@
+[Unit]
+Description=Ethereum RPC readiness for Route 53
+After=network.target ethereum-pow-rpc.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+ExecStart=/usr/bin/python3 /usr/local/lib/ethereum-pow/rpc_health.py
+Environment=RPC_MAX_BLOCK_AGE=300
+Restart=always
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_UNIX
+MemoryMax=128M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target
